@@ -1,1 +1,97 @@
-
+{
+  "classes": [
+    {
+      "id": 1,
+      "name": "INT W (Seg-Qua) 16h",
+      "days": [
+        "segunda",
+        "quarta"
+      ],
+      "time": "16:00",
+      "color": "#3498db"
+    },
+    {
+      "id": 1770301597561,
+      "name": "INT W (Seg-Qua)19h",
+      "days": [
+        "segunda",
+        "quarta"
+      ],
+      "time": "19:00",
+      "color": "#f39c12"
+    }
+  ],
+  "students": [
+    {
+      "id": 1,
+      "name": "Jhonata",
+      "classId": 1,
+      "lastLesson": 173,
+      "nextLesson": 174,
+      "fale": {
+        "F": "MB",
+        "A": "O",
+        "L": "B",
+        "E": "MB"
+      },
+      "average": 3,
+      "attendance": [],
+      "peerHistory": []
+    },
+    {
+      "id": 1770301715961,
+      "name": "Bernardo Memoria",
+      "classId": 1,
+      "lastLesson": 174,
+      "nextLesson": 175,
+      "fale": {
+        "F": "MB",
+        "A": "O",
+        "L": "MB",
+        "E": "MB"
+      },
+      "average": 3.25,
+      "attendance": [],
+      "peerHistory": []
+    },
+    {
+      "id": 1770301752208,
+      "name": "Maria Fenanda",
+      "classId": 1,
+      "lastLesson": 173,
+      "nextLesson": 174,
+      "fale": {
+        "F": "MB",
+        "A": "B",
+        "L": "MB",
+        "E": "MB"
+      },
+      "average": 2.75,
+      "attendance": [],
+      "peerHistory": []
+    },
+    {
+      "id": 1770301804155,
+      "name": "Ana Paula",
+      "classId": 1,
+      "lastLesson": 26,
+      "nextLesson": 27,
+      "fale": {
+        "F": "MB",
+        "A": "MB",
+        "L": "MB",
+        "E": "B"
+      },
+      "average": 2.75,
+      "attendance": [],
+      "peerHistory": []
+    }
+  ],
+  "lessons": [],
+  "settings": {
+    "autoSave": true,
+    "theme": "light"
+  },
+  "exportedAt": "2026-02-05T14:46:57.297Z",
+  "version": "1.0"
+}
