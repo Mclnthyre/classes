@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -227,6 +226,14 @@
         .peer-match-card {
             background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
             border: 2px dashed #2196F3;
+        }
+        
+        .modal-backdrop {
+            z-index: 1040 !important;
+        }
+        
+        .modal {
+            z-index: 1050 !important;
         }
     </style>
 </head>
@@ -676,15 +683,16 @@
     </div>
 
     <!-- Modals -->
-    <!-- Add Class Modal -->
+    <!-- Add/Edit Class Modal -->
     <div class="modal fade" id="addClassModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Nova Turma</h5>
+                    <h5 class="modal-title" id="classModalTitle">Nova Turma</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+                    <input type="hidden" id="editClassId" value="">
                     <div class="mb-3">
                         <label class="form-label">Nome da Turma</label>
                         <input type="text" class="form-control" id="className" placeholder="Ex: INT W (Seg-Qua) 16h">
@@ -692,28 +700,28 @@
                     <div class="mb-3">
                         <label class="form-label">Dias da Semana</label>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" value="segunda" id="dayMonday">
-                            <label class="form-check-label">Segunda-feira</label>
+                            <input class="form-check-input" type="checkbox" value="segunda" id="daySegunda">
+                            <label class="form-check-label" for="daySegunda">Segunda-feira</label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" value="terca" id="dayTuesday">
-                            <label class="form-check-label">Terça-feira</label>
+                            <input class="form-check-input" type="checkbox" value="terca" id="dayTerca">
+                            <label class="form-check-label" for="dayTerca">Terça-feira</label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" value="quarta" id="dayWednesday">
-                            <label class="form-check-label">Quarta-feira</label>
+                            <input class="form-check-input" type="checkbox" value="quarta" id="dayQuarta">
+                            <label class="form-check-label" for="dayQuarta">Quarta-feira</label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" value="quinta" id="dayThursday">
-                            <label class="form-check-label">Quinta-feira</label>
+                            <input class="form-check-input" type="checkbox" value="quinta" id="dayQuinta">
+                            <label class="form-check-label" for="dayQuinta">Quinta-feira</label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" value="sexta" id="dayFriday">
-                            <label class="form-check-label">Sexta-feira</label>
+                            <input class="form-check-input" type="checkbox" value="sexta" id="daySexta">
+                            <label class="form-check-label" for="daySexta">Sexta-feira</label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" value="sabado" id="daySaturday">
-                            <label class="form-check-label">Sábado</label>
+                            <input class="form-check-input" type="checkbox" value="sabado" id="daySabado">
+                            <label class="form-check-label" for="daySabado">Sábado</label>
                         </div>
                     </div>
                     <div class="mb-3">
@@ -741,15 +749,16 @@
         </div>
     </div>
 
-    <!-- Add Student Modal -->
+    <!-- Add/Edit Student Modal -->
     <div class="modal fade" id="addStudentModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Novo Aluno</h5>
+                    <h5 class="modal-title" id="studentModalTitle">Novo Aluno</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+                    <input type="hidden" id="editStudentId" value="">
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Nome do Aluno</label>
@@ -887,6 +896,10 @@
             // Mostrar dashboard inicial
             showSection('dashboard');
             
+            // Configurar data de planejamento para hoje
+            const today = new Date().toISOString().split('T')[0];
+            $('#planningDate').val(today);
+            
             // Carregar dados do GitHub
             loadFromGitHub();
         });
@@ -934,6 +947,8 @@
             updateStudentsList();
             updateWeekView();
             updateNextClasses();
+            updateClassSelects();
+            updateLessonFilter();
         }
         
         // =============================================
@@ -1068,12 +1083,38 @@
         // GERENCIAMENTO DE TURMAS
         // =============================================
         
-        function showAddClassModal() {
+        function showAddClassModal(classId = null) {
+            // Limpar o modal
             $('#className').val('');
             $('.form-check-input').prop('checked', false);
             $('#classTime').val('16:00');
             selectColor('#3498db');
+            $('#editClassId').val('');
+            
+            if (classId) {
+                // Modo edição
+                const cls = appData.classes.find(c => c.id == classId);
+                if (cls) {
+                    $('#classModalTitle').text('Editar Turma');
+                    $('#editClassId').val(classId);
+                    $('#className').val(cls.name);
+                    $('#classTime').val(cls.time);
+                    selectColor(cls.color);
+                    
+                    // Marcar os dias da semana
+                    cls.days.forEach(day => {
+                        $(`#day${capitalizeFirstLetter(day)}`).prop('checked', true);
+                    });
+                }
+            } else {
+                $('#classModalTitle').text('Nova Turma');
+            }
+            
             new bootstrap.Modal('#addClassModal').show();
+        }
+        
+        function capitalizeFirstLetter(string) {
+            return string.charAt(0).toUpperCase() + string.slice(1);
         }
         
         function selectColor(color) {
@@ -1083,6 +1124,7 @@
         }
         
         function saveClass() {
+            const classId = $('#editClassId').val();
             const className = $('#className').val().trim();
             if (!className) {
                 alert('Digite o nome da turma');
@@ -1099,16 +1141,28 @@
                 return;
             }
             
-            const newClass = {
-                id: Date.now(),
+            const classData = {
                 name: className,
                 days: selectedDays,
                 time: $('#classTime').val(),
-                color: $('#classColor').val(),
-                students: []
+                color: $('#classColor').val()
             };
             
-            appData.classes.push(newClass);
+            if (classId) {
+                // Atualizar turma existente
+                const index = appData.classes.findIndex(c => c.id == classId);
+                if (index !== -1) {
+                    appData.classes[index] = { ...appData.classes[index], ...classData };
+                }
+            } else {
+                // Adicionar nova turma
+                const newClass = {
+                    id: Date.now(),
+                    ...classData
+                };
+                appData.classes.push(newClass);
+            }
+            
             saveData();
             
             bootstrap.Modal.getInstance('#addClassModal').hide();
@@ -1131,7 +1185,7 @@
             }
             
             appData.classes.forEach(cls => {
-                const studentCount = appData.students.filter(s => s.classId === cls.id).length;
+                const studentCount = appData.students.filter(s => s.classId == cls.id).length;
                 
                 container.append(`
                     <div class="card mb-3">
@@ -1154,7 +1208,7 @@
                                     </p>
                                 </div>
                                 <div>
-                                    <button class="btn btn-sm btn-outline-primary" onclick="editClass(${cls.id})">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="showAddClassModal(${cls.id})">
                                         <i class="bi bi-pencil"></i>
                                     </button>
                                     <button class="btn btn-sm btn-outline-danger ms-2" onclick="deleteClass(${cls.id})">
@@ -1169,6 +1223,19 @@
             
             // Atualizar selects
             updateClassSelects();
+        }
+        
+        function deleteClass(classId) {
+            if (confirm('Tem certeza que deseja excluir esta turma? Todos os alunos dela também serão excluídos!')) {
+                // Remover turma
+                appData.classes = appData.classes.filter(c => c.id != classId);
+                
+                // Remover alunos da turma
+                appData.students = appData.students.filter(s => s.classId != classId);
+                
+                saveData();
+                showGitHubStatus('Turma excluída com sucesso!', 'success');
+            }
         }
         
         function updateClassSelects() {
@@ -1193,13 +1260,35 @@
         // GERENCIAMENTO DE ALUNOS
         // =============================================
         
-        function showAddStudentModal() {
+        function showAddStudentModal(studentId = null) {
+            // Limpar o modal
             $('#studentName').val('');
             $('#lastLesson').val('');
             $('#nextLesson').val('');
             $('#scoreF, #scoreA, #scoreL, #scoreE').val('B');
+            $('#editStudentId').val('');
+            
+            if (studentId) {
+                // Modo edição
+                const student = appData.students.find(s => s.id == studentId);
+                if (student) {
+                    $('#studentModalTitle').text('Editar Aluno');
+                    $('#editStudentId').val(studentId);
+                    $('#studentName').val(student.name);
+                    $('#lastLesson').val(student.lastLesson);
+                    $('#nextLesson').val(student.nextLesson);
+                    $('#scoreF').val(student.fale.F);
+                    $('#scoreA').val(student.fale.A);
+                    $('#scoreL').val(student.fale.L);
+                    $('#scoreE').val(student.fale.E);
+                }
+            } else {
+                $('#studentModalTitle').text('Novo Aluno');
+            }
+            
             updateCalculatedAverage();
             updateClassSelects();
+            
             new bootstrap.Modal('#addStudentModal').show();
         }
         
@@ -1228,6 +1317,7 @@
         }
         
         function saveStudent() {
+            const studentId = $('#editStudentId').val();
             const name = $('#studentName').val().trim();
             const classId = parseInt($('#studentClass').val());
             const lastLesson = parseInt($('#lastLesson').val());
@@ -1238,8 +1328,7 @@
                 return;
             }
             
-            const newStudent = {
-                id: Date.now(),
+            const studentData = {
                 name: name,
                 classId: classId,
                 lastLesson: lastLesson,
@@ -1249,22 +1338,41 @@
                     A: $('#scoreA').val(),
                     L: $('#scoreL').val(),
                     E: $('#scoreE').val()
-                },
-                attendance: [],
-                peerHistory: []
+                }
             };
             
             // Calcular média
             const scores = { 'O': 4, 'MB': 3, 'B': 2, 'R': 1 };
             const average = (
-                scores[newStudent.fale.F] +
-                scores[newStudent.fale.A] +
-                scores[newStudent.fale.L] +
-                scores[newStudent.fale.E]
+                scores[studentData.fale.F] +
+                scores[studentData.fale.A] +
+                scores[studentData.fale.L] +
+                scores[studentData.fale.E]
             ) / 4;
-            newStudent.average = average;
+            studentData.average = average;
             
-            appData.students.push(newStudent);
+            if (studentId) {
+                // Atualizar aluno existente
+                const index = appData.students.findIndex(s => s.id == studentId);
+                if (index !== -1) {
+                    // Manter o attendance e peerHistory
+                    const existing = appData.students[index];
+                    appData.students[index] = { 
+                        ...existing,
+                        ...studentData 
+                    };
+                }
+            } else {
+                // Adicionar novo aluno
+                const newStudent = {
+                    id: Date.now(),
+                    ...studentData,
+                    attendance: [],
+                    peerHistory: []
+                };
+                appData.students.push(newStudent);
+            }
+            
             saveData();
             
             bootstrap.Modal.getInstance('#addStudentModal').hide();
@@ -1323,7 +1431,7 @@
             }
             
             filteredStudents.forEach(student => {
-                const cls = appData.classes.find(c => c.id === student.classId);
+                const cls = appData.classes.find(c => c.id == student.classId);
                 const className = cls ? cls.name : 'Turma não encontrada';
                 const classColor = cls ? cls.color : '#cccccc';
                 
@@ -1356,8 +1464,11 @@
                                 </div>
                             </div>
                             <div>
-                                <button class="btn btn-sm btn-outline-primary" onclick="editStudent(${student.id})">
+                                <button class="btn btn-sm btn-outline-primary" onclick="showAddStudentModal(${student.id})">
                                     <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger ms-2" onclick="deleteStudent(${student.id})">
+                                    <i class="bi bi-trash"></i>
                                 </button>
                             </div>
                         </div>
@@ -1369,6 +1480,14 @@
             updateLessonFilter();
         }
         
+        function deleteStudent(studentId) {
+            if (confirm('Tem certeza que deseja excluir este aluno?')) {
+                appData.students = appData.students.filter(s => s.id != studentId);
+                saveData();
+                showGitHubStatus('Aluno excluído com sucesso!', 'success');
+            }
+        }
+        
         function filterStudents() {
             updateStudentsList();
         }
@@ -1376,16 +1495,22 @@
         function updateLessonFilter() {
             const filter = $('#filterLesson');
             const currentValue = filter.val();
+            const classFilter = $('#filterClass').val();
             
-            // Obter lições únicas
-            const lessons = [...new Set(appData.students.map(s => s.nextLesson))].sort((a, b) => a - b);
+            // Obter lições únicas dos alunos que pertencem à turma selecionada (ou de todas as turmas se nenhuma turma selecionada)
+            let students = appData.students;
+            if (classFilter) {
+                students = students.filter(s => s.classId == classFilter);
+            }
+            const lessons = [...new Set(students.map(s => s.nextLesson))].sort((a, b) => a - b);
             
             filter.empty().append('<option value="">Todas as lições</option>');
             lessons.forEach(lesson => {
                 filter.append(`<option value="${lesson}">Lição ${lesson}</option>`);
             });
             
-            if (currentValue) {
+            // Restaurar valor anterior se ainda estiver na lista
+            if (currentValue && lessons.includes(parseInt(currentValue))) {
                 filter.val(currentValue);
             }
         }
@@ -1438,7 +1563,7 @@
             
             let html = '<div class="list-group">';
             todayClasses.forEach(cls => {
-                const students = appData.students.filter(s => s.classId === cls.id);
+                const students = appData.students.filter(s => s.classId == cls.id);
                 
                 html += `
                     <div class="list-group-item border-0">
@@ -1592,7 +1717,7 @@
                 html += '<p class="text-muted">Nenhuma aula neste dia</p>';
             } else {
                 dayClasses.forEach(cls => {
-                    const students = appData.students.filter(s => s.classId === cls.id);
+                    const students = appData.students.filter(s => s.classId == cls.id);
                     
                     html += `
                         <div class="mb-4">
@@ -1962,27 +2087,6 @@
         }
         
         // =============================================
-        // FUNÇÕES AUXILIARES
-        // =============================================
-        
-        function editClass(classId) {
-            // Implementar edição de turma
-            alert('Edição de turma em desenvolvimento...');
-        }
-        
-        function deleteClass(classId) {
-            if (confirm('Tem certeza que deseja excluir esta turma?')) {
-                appData.classes = appData.classes.filter(c => c.id !== classId);
-                saveData();
-            }
-        }
-        
-        function editStudent(studentId) {
-            // Implementar edição de aluno
-            alert('Edição de aluno em desenvolvimento...');
-        }
-        
-        // =============================================
         // INICIALIZAÇÃO COMPLETA
         // =============================================
         
@@ -2043,6 +2147,17 @@
                         nextLesson: 230,
                         fale: { F: "O", A: "O", L: "MB", E: "O" },
                         average: 3.75,
+                        attendance: [],
+                        peerHistory: []
+                    },
+                    {
+                        id: 4,
+                        name: "Carlos",
+                        classId: 2,
+                        lastLesson: 172,
+                        nextLesson: 173,
+                        fale: { F: "B", A: "B", L: "R", E: "MB" },
+                        average: 2.0,
                         attendance: [],
                         peerHistory: []
                     }
