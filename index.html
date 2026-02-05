@@ -235,6 +235,17 @@
         .modal {
             z-index: 1050 !important;
         }
+        
+        .btn-export {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+        }
+        
+        .btn-export:hover {
+            background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -293,6 +304,9 @@
             <div class="mt-4">
                 <button class="btn btn-primary w-100 mb-2" onclick="saveToGitHub()">
                     <i class="bi bi-cloud-upload me-2"></i> Salvar no GitHub
+                </button>
+                <button class="btn btn-export w-100 mb-2" onclick="exportData()">
+                    <i class="bi bi-download me-2"></i> Exportar Dados
                 </button>
                 <button class="btn btn-outline-secondary w-100" onclick="showSection('settings')">
                     <i class="bi bi-gear me-2"></i> Configurações
@@ -679,6 +693,32 @@
                     </div>
                 </div>
             </div>
+            
+            <div class="row mt-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0">Backup de Dados</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <button class="btn btn-outline-primary w-100 mb-2" onclick="exportData()">
+                                        <i class="bi bi-download me-2"></i> Exportar Dados (JSON)
+                                    </button>
+                                    <p class="small text-muted">Baixe um backup completo dos seus dados</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <button class="btn btn-outline-success w-100 mb-2" onclick="importData()">
+                                        <i class="bi bi-upload me-2"></i> Importar Dados
+                                    </button>
+                                    <p class="small text-muted">Restaurar dados de um backup</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </section>
     </div>
 
@@ -862,7 +902,7 @@
         // =============================================
         
         // Configuração do GitHub (seus dados)
-        const GITHUB_CONFIG = {
+        let GITHUB_CONFIG = {
             username: 'mclnthyre',
             repo: 'classes',
             token: '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'
@@ -884,6 +924,15 @@
         // =============================================
         
         $(document).ready(function() {
+            // Carregar configuração do GitHub do localStorage
+            const savedConfig = localStorage.getItem('githubConfig');
+            if (savedConfig) {
+                GITHUB_CONFIG = JSON.parse(savedConfig);
+                $('#githubUsername').val(GITHUB_CONFIG.username);
+                $('#githubRepo').val(GITHUB_CONFIG.repo);
+                $('#githubToken').val(GITHUB_CONFIG.token);
+            }
+            
             // Carregar dados salvos
             loadData();
             
@@ -900,8 +949,10 @@
             const today = new Date().toISOString().split('T')[0];
             $('#planningDate').val(today);
             
-            // Carregar dados do GitHub
-            loadFromGitHub();
+            // Carregar dados do GitHub se disponível
+            setTimeout(() => {
+                loadFromGitHub();
+            }, 1000);
         });
         
         function updateCurrentDate() {
@@ -920,7 +971,9 @@
             
             // Auto-save
             if (appData.settings.autoSave) {
-                setInterval(saveToGitHub, 30000); // Salva a cada 30 segundos
+                setInterval(() => {
+                    saveData(); // Salvar apenas localmente
+                }, 30000); // Salva a cada 30 segundos
             }
         }
         
@@ -952,7 +1005,7 @@
         }
         
         // =============================================
-        // FUNÇÕES DO GITHUB
+        // FUNÇÕES DO GITHUB - CORRIGIDAS
         // =============================================
         
         async function saveToGitHub() {
@@ -964,51 +1017,66 @@
                     lastUpdated: new Date().toISOString()
                 };
                 
+                // Codificar o conteúdo em base64
                 const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
                 
-                // Verificar se o arquivo já existe
-                const checkUrl = `https://api.github.com/repos/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/contents/data.json`;
+                // Primeiro, verificar se o arquivo já existe para obter o SHA
+                const getUrl = `https://api.github.com/repos/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/contents/data.json`;
                 const headers = {
                     'Authorization': `token ${GITHUB_CONFIG.token}`,
+                    'Accept': 'application/vnd.github.v3+json',
                     'Content-Type': 'application/json'
                 };
                 
-                let sha = '';
+                let sha = null;
                 try {
-                    const response = await fetch(checkUrl, { headers });
+                    const response = await fetch(getUrl, { 
+                        method: 'GET',
+                        headers: headers
+                    });
+                    
                     if (response.ok) {
                         const fileData = await response.json();
                         sha = fileData.sha;
                     }
                 } catch (e) {
-                    // Arquivo não existe ainda
+                    console.log('Arquivo não encontrado, será criado um novo');
                 }
                 
-                // Criar ou atualizar arquivo
-                const updateUrl = `https://api.github.com/repos/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/contents/data.json`;
+                // Preparar o corpo da requisição
                 const body = {
-                    message: `Atualização automática - ${new Date().toLocaleString()}`,
+                    message: `Atualização automática - ${new Date().toLocaleString('pt-BR')}`,
                     content: content,
-                    sha: sha || undefined
+                    ...(sha && { sha: sha }) // Incluir SHA apenas se o arquivo já existir
                 };
                 
-                const updateResponse = await fetch(updateUrl, {
+                // Criar ou atualizar o arquivo
+                const updateResponse = await fetch(getUrl, {
                     method: 'PUT',
                     headers: headers,
                     body: JSON.stringify(body)
                 });
                 
-                if (updateResponse.ok) {
-                    showGitHubStatus('Dados salvos no GitHub com sucesso!', 'success');
-                    saveData(); // Salvar também no localStorage
-                } else {
-                    throw new Error('Erro ao salvar no GitHub');
+                if (!updateResponse.ok) {
+                    const errorData = await updateResponse.json();
+                    throw new Error(errorData.message || 'Erro ao salvar no GitHub');
                 }
+                
+                const result = await updateResponse.json();
+                
+                showGitHubStatus('Dados salvos no GitHub com sucesso!', 'success');
+                saveData(); // Salvar também no localStorage
+                
             } catch (error) {
-                console.error('Erro:', error);
-                showGitHubStatus('Erro ao salvar no GitHub', 'error');
-                // Salvar apenas localmente
-                saveData();
+                console.error('Erro ao salvar no GitHub:', error);
+                showGitHubStatus(`Erro: ${error.message}`, 'error');
+                
+                // Oferecer opção de exportar manualmente
+                setTimeout(() => {
+                    if (confirm('Não foi possível salvar no GitHub. Deseja exportar os dados manualmente?')) {
+                        exportData();
+                    }
+                }, 1000);
             } finally {
                 showLoading(false);
             }
@@ -1027,23 +1095,87 @@
                     saveData();
                     showGitHubStatus('Dados carregados do GitHub!', 'success');
                 } else {
-                    throw new Error('Arquivo não encontrado');
+                    throw new Error('Arquivo não encontrado no GitHub');
                 }
             } catch (error) {
-                console.log('Usando dados locais...');
-                loadData();
+                console.log('Usando dados locais...', error.message);
+                // Não mostrar erro, apenas usar dados locais
             } finally {
                 showLoading(false);
             }
         }
         
         function saveGitHubConfig() {
-            GITHUB_CONFIG.username = $('#githubUsername').val();
-            GITHUB_CONFIG.repo = $('#githubRepo').val();
-            GITHUB_CONFIG.token = $('#githubToken').val();
+            GITHUB_CONFIG = {
+                username: $('#githubUsername').val(),
+                repo: $('#githubRepo').val(),
+                token: $('#githubToken').val()
+            };
             
             localStorage.setItem('githubConfig', JSON.stringify(GITHUB_CONFIG));
             showGitHubStatus('Configuração do GitHub salva!', 'success');
+        }
+        
+        // =============================================
+        // FUNÇÕES DE EXPORTAÇÃO/IMPORTAÇÃO
+        // =============================================
+        
+        function exportData() {
+            const data = {
+                ...appData,
+                exportedAt: new Date().toISOString(),
+                version: '1.0'
+            };
+            
+            const dataStr = JSON.stringify(data, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            
+            const exportFileDefaultName = `english-planner-backup-${new Date().toISOString().split('T')[0]}.json`;
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            document.body.appendChild(linkElement);
+            linkElement.click();
+            document.body.removeChild(linkElement);
+            
+            showGitHubStatus('Backup exportado com sucesso!', 'success');
+        }
+        
+        function importData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                
+                reader.onload = function(event) {
+                    try {
+                        const data = JSON.parse(event.target.result);
+                        
+                        // Validar estrutura básica dos dados
+                        if (data.classes && Array.isArray(data.classes) && 
+                            data.students && Array.isArray(data.students)) {
+                            
+                            if (confirm('Importar dados? Isso substituirá todos os dados atuais.')) {
+                                appData = data;
+                                saveData();
+                                showGitHubStatus('Dados importados com sucesso!', 'success');
+                            }
+                        } else {
+                            alert('Arquivo inválido. O arquivo não contém a estrutura correta.');
+                        }
+                    } catch (error) {
+                        alert('Erro ao ler o arquivo. Certifique-se de que é um arquivo JSON válido.');
+                    }
+                };
+                
+                reader.readAsText(file);
+            };
+            
+            input.click();
         }
         
         // =============================================
