@@ -1,1 +1,2061 @@
 
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive English Planner</title>
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4361ee;
+            --secondary: #3a0ca3;
+            --success: #4cc9f0;
+            --warning: #f72585;
+            --light: #f8f9fa;
+            --dark: #212529;
+        }
+        
+        * {
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+        
+        .navbar-brand {
+            font-weight: 700;
+            color: var(--primary) !important;
+        }
+        
+        .sidebar {
+            background: white;
+            border-right: 1px solid #dee2e6;
+            min-height: calc(100vh - 56px);
+            position: fixed;
+            width: 280px;
+            overflow-y: auto;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+        }
+        
+        .main-content {
+            margin-left: 280px;
+            padding: 20px;
+            transition: all 0.3s;
+        }
+        
+        @media (max-width: 992px) {
+            .sidebar {
+                margin-left: -280px;
+            }
+            .main-content {
+                margin-left: 0;
+            }
+            .sidebar.active {
+                margin-left: 0;
+            }
+        }
+        
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+        }
+        
+        .class-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+        
+        .lesson-even {
+            border-left: 5px solid var(--success);
+        }
+        
+        .lesson-odd {
+            border-left: 5px solid var(--warning);
+        }
+        
+        .fale-badge {
+            width: 28px;
+            height: 28px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-weight: bold;
+            font-size: 0.8rem;
+            margin-right: 5px;
+        }
+        
+        .fale-O { background: #4CAF50; color: white; }
+        .fale-MB { background: #8BC34A; color: white; }
+        .fale-B { background: #FFC107; color: white; }
+        .fale-R { background: #F44336; color: white; }
+        
+        .student-item {
+            border-radius: 10px;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            transition: all 0.2s;
+            border: 1px solid #e9ecef;
+        }
+        
+        .student-item:hover {
+            background-color: #f8f9fa;
+            border-color: var(--primary);
+        }
+        
+        .attendance-present {
+            color: #4CAF50;
+            font-size: 1.2rem;
+        }
+        
+        .attendance-absent {
+            color: #F44336;
+            font-size: 1.2rem;
+        }
+        
+        .week-view-day {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            height: 100%;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .week-view-day:hover {
+            border-color: var(--primary);
+            transform: scale(1.02);
+        }
+        
+        .week-view-day.active {
+            border-color: var(--primary);
+            background: linear-gradient(135deg, #4361ee15 0%, #3a0ca315 100%);
+        }
+        
+        .order-list-item {
+            counter-increment: order-counter;
+            padding: 10px 15px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            background: white;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .order-list-item:before {
+            content: counter(order-counter) ".";
+            font-weight: bold;
+            margin-right: 10px;
+            color: var(--primary);
+        }
+        
+        .phase-card {
+            border-top: 4px solid;
+            margin-bottom: 20px;
+        }
+        
+        .phase-opening { border-color: #4CC9F0; }
+        .phase-self-study { border-color: #7209B7; }
+        .phase-teacher-support { border-color: #F72585; }
+        .phase-peer-work { border-color: #3A0CA3; }
+        .phase-closing { border-color: #4361EE; }
+        
+        .github-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: white;
+            border-radius: 10px;
+            padding: 10px 15px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+            display: none;
+        }
+        
+        .github-status.success {
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .github-status.error {
+            border-left: 4px solid #F44336;
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.9);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .color-picker {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: inline-block;
+            margin: 2px;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        
+        .color-picker.selected {
+            border-color: #000;
+            transform: scale(1.1);
+        }
+        
+        .peer-match-card {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border: 2px dashed #2196F3;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="bi bi-journal-text me-2"></i>
+                Interactive English Planner
+            </a>
+            <div class="d-flex align-items-center">
+                <span class="me-3 text-muted d-none d-md-block" id="currentDate"></span>
+                <button class="btn btn-outline-primary btn-sm" onclick="toggleSidebar()">
+                    <i class="bi bi-list"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="p-3">
+            <div class="mb-4">
+                <h5 class="text-primary mb-3">Menu Principal</h5>
+                <div class="list-group list-group-flush">
+                    <a href="#" class="list-group-item list-group-item-action border-0 py-3" onclick="showSection('dashboard')">
+                        <i class="bi bi-speedometer2 me-2"></i> Dashboard
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action border-0 py-3" onclick="showSection('week-view')">
+                        <i class="bi bi-calendar-week me-2"></i> Visão Semanal
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action border-0 py-3" onclick="showSection('classes')">
+                        <i class="bi bi-people me-2"></i> Turmas
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action border-0 py-3" onclick="showSection('students')">
+                        <i class="bi bi-person me-2"></i> Alunos
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action border-0 py-3" onclick="showSection('lessons')">
+                        <i class="bi bi-journal-check me-2"></i> Planejamento
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action border-0 py-3" onclick="showSection('reports')">
+                        <i class="bi bi-graph-up me-2"></i> Relatórios
+                    </a>
+                </div>
+            </div>
+            
+            <hr>
+            
+            <div class="mb-4">
+                <h6 class="text-muted mb-3">Próximas Aulas</h6>
+                <div id="nextClassesList"></div>
+            </div>
+            
+            <hr>
+            
+            <div class="mt-4">
+                <button class="btn btn-primary w-100 mb-2" onclick="saveToGitHub()">
+                    <i class="bi bi-cloud-upload me-2"></i> Salvar no GitHub
+                </button>
+                <button class="btn btn-outline-secondary w-100" onclick="showSection('settings')">
+                    <i class="bi bi-gear me-2"></i> Configurações
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content" id="mainContent">
+        <!-- Dashboard Section -->
+        <section id="dashboard" class="section-content">
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h2>Dashboard</h2>
+                    <p class="text-muted">Visão geral do seu planejamento</p>
+                </div>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-3 mb-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <h1 class="card-title" id="totalClasses">0</h1>
+                            <p class="card-text">Turmas Ativas</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <h1 class="card-title" id="totalStudents">0</h1>
+                            <p class="card-text">Total de Alunos</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body">
+                            <h1 class="card-title" id="weekClasses">0</h1>
+                            <p class="card-text">Aulas Esta Semana</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body">
+                            <h1 class="card-title" id="pendingPlanning">0</h1>
+                            <p class="card-text">Planejamentos Pendentes</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0">Aula de Hoje</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="todayClass"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0">Próximas Aulas</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="upcomingClasses"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Week View Section -->
+        <section id="week-view" class="section-content d-none">
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h2>Visão Semanal</h2>
+                    <p class="text-muted">Todas as suas turmas na semana</p>
+                </div>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="row" id="weekDays"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0">Detalhes do Dia</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="dayDetails"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Classes Section -->
+        <section id="classes" class="section-content d-none">
+            <div class="row mb-4">
+                <div class="col-12 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2>Turmas</h2>
+                        <p class="text-muted">Gerencie suas turmas</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="showAddClassModal()">
+                        <i class="bi bi-plus-circle me-2"></i> Nova Turma
+                    </button>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <div id="classesList"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Students Section -->
+        <section id="students" class="section-content d-none">
+            <div class="row mb-4">
+                <div class="col-12 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2>Alunos</h2>
+                        <p class="text-muted">Gerencie todos os alunos</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="showAddStudentModal()">
+                        <i class="bi bi-person-plus me-2"></i> Novo Aluno
+                    </button>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <input type="text" class="form-control" placeholder="Buscar aluno..." id="searchStudent">
+                </div>
+                <div class="col-md-3">
+                    <select class="form-control" id="filterClass">
+                        <option value="">Todas as turmas</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-control" id="filterLesson">
+                        <option value="">Todas as lições</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <div id="studentsList"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Lessons Planning Section -->
+        <section id="lessons" class="section-content d-none">
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h2>Planejamento de Aulas</h2>
+                    <p class="text-muted">Planeje suas aulas interativas</p>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <select class="form-control" id="selectClassForPlanning">
+                        <option value="">Selecione uma turma</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <input type="date" class="form-control" id="planningDate">
+                </div>
+                <div class="col-md-4">
+                    <button class="btn btn-primary w-100" onclick="generateAttendanceOrder()">
+                        <i class="bi bi-magic me-2"></i> Gerar Ordem
+                    </button>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0">Ordem de Atendimento</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="attendanceOrder"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0">Planejamento Interativo</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="card phase-card phase-opening">
+                                        <div class="card-body">
+                                            <h6>Opening (5 min)</h6>
+                                            <p class="small text-muted">Introdução e objetivos</p>
+                                        </div>
+                                    </div>
+                                    <div class="card phase-card phase-self-study">
+                                        <div class="card-body">
+                                            <h6>Self Study (15 min)</h6>
+                                            <p class="small text-muted">Estudo individual</p>
+                                        </div>
+                                    </div>
+                                    <div class="card phase-card phase-teacher-support">
+                                        <div class="card-body">
+                                            <h6>Teacher Support (20 min)</h6>
+                                            <p class="small text-muted">Suporte individualizado</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card phase-card phase-peer-work">
+                                        <div class="card-body">
+                                            <h6>Peer Work (15 min)</h6>
+                                            <p class="small text-muted">Trabalho em pares</p>
+                                            <div id="peerWorkPairs"></div>
+                                        </div>
+                                    </div>
+                                    <div class="card phase-card phase-closing">
+                                        <div class="card-body">
+                                            <h6>Closing (5 min)</h6>
+                                            <p class="small text-muted">Revisão e feedback</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Reports Section -->
+        <section id="reports" class="section-content d-none">
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h2>Relatórios</h2>
+                    <p class="text-muted">Análise de progresso e desempenho</p>
+                </div>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <select class="form-control" id="reportClassSelect">
+                                <option value="">Selecione uma turma</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <select class="form-control" id="reportType">
+                                <option value="progress">Progresso Geral</option>
+                                <option value="attendance">Frequência</option>
+                                <option value="fale">Avaliações F.A.L.E</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <button class="btn btn-primary w-100" onclick="generateReport()">
+                                <i class="bi bi-file-earmark-text me-2"></i> Gerar Relatório
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <div id="reportContent"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Settings Section -->
+        <section id="settings" class="section-content d-none">
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h2>Configurações</h2>
+                    <p class="text-muted">Configure sua plataforma</p>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0">Configuração do GitHub</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">Nome de Usuário</label>
+                                <input type="text" class="form-control" id="githubUsername" value="mclnthyre">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Repositório</label>
+                                <input type="text" class="form-control" id="githubRepo" value="classes">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Token de Acesso</label>
+                                <input type="password" class="form-control" id="githubToken" value="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">
+                            </div>
+                            <button class="btn btn-primary" onclick="saveGitHubConfig()">
+                                <i class="bi bi-save me-2"></i> Salvar Configuração
+                            </button>
+                            <button class="btn btn-outline-success ms-2" onclick="loadFromGitHub()">
+                                <i class="bi bi-cloud-download me-2"></i> Carregar do GitHub
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0">Preferências</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">Auto-save</label>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="autoSave" checked>
+                                    <label class="form-check-label">Salvar automaticamente</label>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Notificações</label>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="notifications" checked>
+                                    <label class="form-check-label">Mostrar notificações</label>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Tema</label>
+                                <select class="form-control" id="themeSelect">
+                                    <option value="light">Claro</option>
+                                    <option value="dark">Escuro</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Modals -->
+    <!-- Add Class Modal -->
+    <div class="modal fade" id="addClassModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nova Turma</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nome da Turma</label>
+                        <input type="text" class="form-control" id="className" placeholder="Ex: INT W (Seg-Qua) 16h">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Dias da Semana</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="segunda" id="dayMonday">
+                            <label class="form-check-label">Segunda-feira</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="terca" id="dayTuesday">
+                            <label class="form-check-label">Terça-feira</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="quarta" id="dayWednesday">
+                            <label class="form-check-label">Quarta-feira</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="quinta" id="dayThursday">
+                            <label class="form-check-label">Quinta-feira</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="sexta" id="dayFriday">
+                            <label class="form-check-label">Sexta-feira</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="sabado" id="daySaturday">
+                            <label class="form-check-label">Sábado</label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Horário</label>
+                        <input type="time" class="form-control" id="classTime" value="16:00">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Cor da Turma</label>
+                        <div>
+                            <span class="color-picker" style="background:#3498db;" onclick="selectColor('#3498db')"></span>
+                            <span class="color-picker" style="background:#e74c3c;" onclick="selectColor('#e74c3c')"></span>
+                            <span class="color-picker" style="background:#2ecc71;" onclick="selectColor('#2ecc71')"></span>
+                            <span class="color-picker" style="background:#f39c12;" onclick="selectColor('#f39c12')"></span>
+                            <span class="color-picker" style="background:#9b59b6;" onclick="selectColor('#9b59b6')"></span>
+                            <span class="color-picker" style="background:#1abc9c;" onclick="selectColor('#1abc9c')"></span>
+                        </div>
+                        <input type="hidden" id="classColor" value="#3498db">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="saveClass()">Salvar Turma</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Student Modal -->
+    <div class="modal fade" id="addStudentModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Novo Aluno</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Nome do Aluno</label>
+                            <input type="text" class="form-control" id="studentName">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Turma</label>
+                            <select class="form-control" id="studentClass">
+                                <option value="">Selecione uma turma</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Última Lição Feita</label>
+                            <input type="number" class="form-control" id="lastLesson" min="1" max="999">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Próxima Lição</label>
+                            <input type="number" class="form-control" id="nextLesson" min="1" max="999">
+                        </div>
+                    </div>
+                    
+                    <h6 class="mt-4 mb-3">Avaliações F.A.L.E</h6>
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Fluência (F)</label>
+                            <select class="form-control" id="scoreF">
+                                <option value="O">Ótimo (O)</option>
+                                <option value="MB">Muito Bom (MB)</option>
+                                <option value="B" selected>Bom (B)</option>
+                                <option value="R">Regular (R)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Pronúncia (A)</label>
+                            <select class="form-control" id="scoreA">
+                                <option value="O">Ótimo (O)</option>
+                                <option value="MB">Muito Bom (MB)</option>
+                                <option value="B" selected>Bom (B)</option>
+                                <option value="R">Regular (R)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Compreensão (L)</label>
+                            <select class="form-control" id="scoreL">
+                                <option value="O">Ótimo (O)</option>
+                                <option value="MB">Muito Bom (MB)</option>
+                                <option value="B" selected>Bom (B)</option>
+                                <option value="R">Regular (R)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Expressão (E)</label>
+                            <select class="form-control" id="scoreE">
+                                <option value="O">Ótimo (O)</option>
+                                <option value="MB">Muito Bom (MB)</option>
+                                <option value="B" selected>Bom (B)</option>
+                                <option value="R">Regular (R)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info mt-3">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Média calculada automaticamente: 
+                        <strong id="calculatedAverage">Bom (2.0)</strong>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="saveStudent()">Salvar Aluno</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- GitHub Status -->
+    <div class="github-status" id="githubStatus">
+        <div class="d-flex align-items-center">
+            <i class="bi bi-check-circle-fill me-2 text-success"></i>
+            <span id="githubStatusText">Salvo com sucesso!</span>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay d-none" id="loadingOverlay">
+        <div class="text-center">
+            <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;"></div>
+            <h5>Processando...</h5>
+        </div>
+    </div>
+
+    <!-- Bootstrap & jQuery -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <script>
+        // =============================================
+        // CONFIGURAÇÃO INICIAL
+        // =============================================
+        
+        // Configuração do GitHub (seus dados)
+        const GITHUB_CONFIG = {
+            username: 'mclnthyre',
+            repo: 'classes',
+            token: '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'
+        };
+        
+        // Dados da aplicação
+        let appData = {
+            classes: [],
+            students: [],
+            lessons: [],
+            settings: {
+                autoSave: true,
+                theme: 'light'
+            }
+        };
+        
+        // =============================================
+        // FUNÇÕES DE INICIALIZAÇÃO
+        // =============================================
+        
+        $(document).ready(function() {
+            // Carregar dados salvos
+            loadData();
+            
+            // Atualizar data atual
+            updateCurrentDate();
+            
+            // Configurar eventos
+            setupEventListeners();
+            
+            // Mostrar dashboard inicial
+            showSection('dashboard');
+            
+            // Carregar dados do GitHub
+            loadFromGitHub();
+        });
+        
+        function updateCurrentDate() {
+            const now = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            $('#currentDate').text(now.toLocaleDateString('pt-BR', options));
+        }
+        
+        function setupEventListeners() {
+            // Atualizar média quando mudar avaliações
+            $('#scoreF, #scoreA, #scoreL, #scoreE').on('change', updateCalculatedAverage);
+            
+            // Buscar alunos
+            $('#searchStudent').on('input', filterStudents);
+            $('#filterClass, #filterLesson').on('change', filterStudents);
+            
+            // Auto-save
+            if (appData.settings.autoSave) {
+                setInterval(saveToGitHub, 30000); // Salva a cada 30 segundos
+            }
+        }
+        
+        // =============================================
+        // GERENCIAMENTO DE DADOS
+        // =============================================
+        
+        function loadData() {
+            const saved = localStorage.getItem('englishPlannerData');
+            if (saved) {
+                appData = JSON.parse(saved);
+                updateUI();
+            }
+        }
+        
+        function saveData() {
+            localStorage.setItem('englishPlannerData', JSON.stringify(appData));
+            updateUI();
+        }
+        
+        function updateUI() {
+            updateDashboard();
+            updateClassesList();
+            updateStudentsList();
+            updateWeekView();
+            updateNextClasses();
+        }
+        
+        // =============================================
+        // FUNÇÕES DO GITHUB
+        // =============================================
+        
+        async function saveToGitHub() {
+            showLoading(true);
+            
+            try {
+                const data = {
+                    ...appData,
+                    lastUpdated: new Date().toISOString()
+                };
+                
+                const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
+                
+                // Verificar se o arquivo já existe
+                const checkUrl = `https://api.github.com/repos/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/contents/data.json`;
+                const headers = {
+                    'Authorization': `token ${GITHUB_CONFIG.token}`,
+                    'Content-Type': 'application/json'
+                };
+                
+                let sha = '';
+                try {
+                    const response = await fetch(checkUrl, { headers });
+                    if (response.ok) {
+                        const fileData = await response.json();
+                        sha = fileData.sha;
+                    }
+                } catch (e) {
+                    // Arquivo não existe ainda
+                }
+                
+                // Criar ou atualizar arquivo
+                const updateUrl = `https://api.github.com/repos/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/contents/data.json`;
+                const body = {
+                    message: `Atualização automática - ${new Date().toLocaleString()}`,
+                    content: content,
+                    sha: sha || undefined
+                };
+                
+                const updateResponse = await fetch(updateUrl, {
+                    method: 'PUT',
+                    headers: headers,
+                    body: JSON.stringify(body)
+                });
+                
+                if (updateResponse.ok) {
+                    showGitHubStatus('Dados salvos no GitHub com sucesso!', 'success');
+                    saveData(); // Salvar também no localStorage
+                } else {
+                    throw new Error('Erro ao salvar no GitHub');
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                showGitHubStatus('Erro ao salvar no GitHub', 'error');
+                // Salvar apenas localmente
+                saveData();
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        async function loadFromGitHub() {
+            showLoading(true);
+            
+            try {
+                const url = `https://raw.githubusercontent.com/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/main/data.json`;
+                const response = await fetch(url + '?t=' + Date.now());
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    appData = data;
+                    saveData();
+                    showGitHubStatus('Dados carregados do GitHub!', 'success');
+                } else {
+                    throw new Error('Arquivo não encontrado');
+                }
+            } catch (error) {
+                console.log('Usando dados locais...');
+                loadData();
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        function saveGitHubConfig() {
+            GITHUB_CONFIG.username = $('#githubUsername').val();
+            GITHUB_CONFIG.repo = $('#githubRepo').val();
+            GITHUB_CONFIG.token = $('#githubToken').val();
+            
+            localStorage.setItem('githubConfig', JSON.stringify(GITHUB_CONFIG));
+            showGitHubStatus('Configuração do GitHub salva!', 'success');
+        }
+        
+        // =============================================
+        // FUNÇÕES DA INTERFACE
+        // =============================================
+        
+        function showSection(sectionId) {
+            $('.section-content').addClass('d-none');
+            $(`#${sectionId}`).removeClass('d-none');
+        }
+        
+        function toggleSidebar() {
+            $('#sidebar').toggleClass('active');
+            $('.main-content').toggleClass('expanded');
+        }
+        
+        function showLoading(show) {
+            if (show) {
+                $('#loadingOverlay').removeClass('d-none');
+            } else {
+                $('#loadingOverlay').addClass('d-none');
+            }
+        }
+        
+        function showGitHubStatus(message, type) {
+            const status = $('#githubStatus');
+            status.removeClass('success error').addClass(type);
+            $('#githubStatusText').text(message);
+            status.fadeIn();
+            
+            setTimeout(() => {
+                status.fadeOut();
+            }, 3000);
+        }
+        
+        // =============================================
+        // GERENCIAMENTO DE TURMAS
+        // =============================================
+        
+        function showAddClassModal() {
+            $('#className').val('');
+            $('.form-check-input').prop('checked', false);
+            $('#classTime').val('16:00');
+            selectColor('#3498db');
+            new bootstrap.Modal('#addClassModal').show();
+        }
+        
+        function selectColor(color) {
+            $('.color-picker').removeClass('selected');
+            $(`.color-picker[style*="background:${color}"]`).addClass('selected');
+            $('#classColor').val(color);
+        }
+        
+        function saveClass() {
+            const className = $('#className').val().trim();
+            if (!className) {
+                alert('Digite o nome da turma');
+                return;
+            }
+            
+            const selectedDays = [];
+            $('input[type="checkbox"]:checked').each(function() {
+                selectedDays.push($(this).val());
+            });
+            
+            if (selectedDays.length === 0) {
+                alert('Selecione pelo menos um dia da semana');
+                return;
+            }
+            
+            const newClass = {
+                id: Date.now(),
+                name: className,
+                days: selectedDays,
+                time: $('#classTime').val(),
+                color: $('#classColor').val(),
+                students: []
+            };
+            
+            appData.classes.push(newClass);
+            saveData();
+            
+            bootstrap.Modal.getInstance('#addClassModal').hide();
+            showGitHubStatus('Turma salva com sucesso!', 'success');
+        }
+        
+        function updateClassesList() {
+            const container = $('#classesList');
+            container.empty();
+            
+            if (appData.classes.length === 0) {
+                container.html(`
+                    <div class="text-center py-5">
+                        <i class="bi bi-people display-1 text-muted"></i>
+                        <h5 class="mt-3">Nenhuma turma cadastrada</h5>
+                        <p class="text-muted">Clique em "Nova Turma" para começar</p>
+                    </div>
+                `);
+                return;
+            }
+            
+            appData.classes.forEach(cls => {
+                const studentCount = appData.students.filter(s => s.classId === cls.id).length;
+                
+                container.append(`
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h5 class="mb-1">
+                                        <span class="class-badge" style="background:${cls.color};color:white;">
+                                            ${cls.name}
+                                        </span>
+                                    </h5>
+                                    <p class="text-muted mb-1">
+                                        <i class="bi bi-calendar-week me-1"></i>
+                                        ${cls.days.map(d => d.charAt(0).toUpperCase() + d.slice(1)).join(', ')}
+                                        às ${cls.time}
+                                    </p>
+                                    <p class="mb-0">
+                                        <i class="bi bi-people me-1"></i>
+                                        ${studentCount} aluno${studentCount !== 1 ? 's' : ''}
+                                    </p>
+                                </div>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="editClass(${cls.id})">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger ms-2" onclick="deleteClass(${cls.id})">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `);
+            });
+            
+            // Atualizar selects
+            updateClassSelects();
+        }
+        
+        function updateClassSelects() {
+            const selects = ['#studentClass', '#selectClassForPlanning', '#reportClassSelect', '#filterClass'];
+            
+            selects.forEach(selector => {
+                const select = $(selector);
+                const currentValue = select.val();
+                select.empty().append('<option value="">Selecione uma turma</option>');
+                
+                appData.classes.forEach(cls => {
+                    select.append(`<option value="${cls.id}">${cls.name}</option>`);
+                });
+                
+                if (currentValue) {
+                    select.val(currentValue);
+                }
+            });
+        }
+        
+        // =============================================
+        // GERENCIAMENTO DE ALUNOS
+        // =============================================
+        
+        function showAddStudentModal() {
+            $('#studentName').val('');
+            $('#lastLesson').val('');
+            $('#nextLesson').val('');
+            $('#scoreF, #scoreA, #scoreL, #scoreE').val('B');
+            updateCalculatedAverage();
+            updateClassSelects();
+            new bootstrap.Modal('#addStudentModal').show();
+        }
+        
+        function updateCalculatedAverage() {
+            const scores = {
+                'O': 4,
+                'MB': 3,
+                'B': 2,
+                'R': 1
+            };
+            
+            const f = scores[$('#scoreF').val()];
+            const a = scores[$('#scoreA').val()];
+            const l = scores[$('#scoreL').val()];
+            const e = scores[$('#scoreE').val()];
+            
+            const average = (f + a + l + e) / 4;
+            
+            let text;
+            if (average >= 3.5) text = 'Ótimo';
+            else if (average >= 2.5) text = 'Muito Bom';
+            else if (average >= 1.5) text = 'Bom';
+            else text = 'Regular';
+            
+            $('#calculatedAverage').text(`${text} (${average.toFixed(1)})`);
+        }
+        
+        function saveStudent() {
+            const name = $('#studentName').val().trim();
+            const classId = parseInt($('#studentClass').val());
+            const lastLesson = parseInt($('#lastLesson').val());
+            const nextLesson = parseInt($('#nextLesson').val());
+            
+            if (!name || !classId || !lastLesson || !nextLesson) {
+                alert('Preencha todos os campos obrigatórios');
+                return;
+            }
+            
+            const newStudent = {
+                id: Date.now(),
+                name: name,
+                classId: classId,
+                lastLesson: lastLesson,
+                nextLesson: nextLesson,
+                fale: {
+                    F: $('#scoreF').val(),
+                    A: $('#scoreA').val(),
+                    L: $('#scoreL').val(),
+                    E: $('#scoreE').val()
+                },
+                attendance: [],
+                peerHistory: []
+            };
+            
+            // Calcular média
+            const scores = { 'O': 4, 'MB': 3, 'B': 2, 'R': 1 };
+            const average = (
+                scores[newStudent.fale.F] +
+                scores[newStudent.fale.A] +
+                scores[newStudent.fale.L] +
+                scores[newStudent.fale.E]
+            ) / 4;
+            newStudent.average = average;
+            
+            appData.students.push(newStudent);
+            saveData();
+            
+            bootstrap.Modal.getInstance('#addStudentModal').hide();
+            showGitHubStatus('Aluno salvo com sucesso!', 'success');
+        }
+        
+        function updateStudentsList() {
+            const container = $('#studentsList');
+            container.empty();
+            
+            if (appData.students.length === 0) {
+                container.html(`
+                    <div class="text-center py-5">
+                        <i class="bi bi-person display-1 text-muted"></i>
+                        <h5 class="mt-3">Nenhum aluno cadastrado</h5>
+                        <p class="text-muted">Clique em "Novo Aluno" para começar</p>
+                    </div>
+                `);
+                return;
+            }
+            
+            let filteredStudents = [...appData.students];
+            
+            // Aplicar filtros
+            const searchTerm = $('#searchStudent').val().toLowerCase();
+            const classFilter = $('#filterClass').val();
+            const lessonFilter = $('#filterLesson').val();
+            
+            if (searchTerm) {
+                filteredStudents = filteredStudents.filter(s => 
+                    s.name.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            if (classFilter) {
+                filteredStudents = filteredStudents.filter(s => 
+                    s.classId == classFilter
+                );
+            }
+            
+            if (lessonFilter) {
+                filteredStudents = filteredStudents.filter(s => 
+                    s.nextLesson == lessonFilter
+                );
+            }
+            
+            if (filteredStudents.length === 0) {
+                container.html(`
+                    <div class="text-center py-5">
+                        <i class="bi bi-search display-1 text-muted"></i>
+                        <h5 class="mt-3">Nenhum aluno encontrado</h5>
+                        <p class="text-muted">Tente alterar os filtros de busca</p>
+                    </div>
+                `);
+                return;
+            }
+            
+            filteredStudents.forEach(student => {
+                const cls = appData.classes.find(c => c.id === student.classId);
+                const className = cls ? cls.name : 'Turma não encontrada';
+                const classColor = cls ? cls.color : '#cccccc';
+                
+                // Determinar se lição é par ou ímpar
+                const isEvenLesson = student.nextLesson % 2 === 0;
+                const lessonType = isEvenLesson ? 'PAR' : 'ÍMPAR';
+                const lessonClass = isEvenLesson ? 'lesson-even' : 'lesson-odd';
+                
+                container.append(`
+                    <div class="student-item ${lessonClass}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">${student.name}</h6>
+                                <p class="mb-1 text-muted small">
+                                    <span class="badge" style="background:${classColor};color:white;">
+                                        ${className}
+                                    </span>
+                                    <span class="ms-2">
+                                        Lição ${student.nextLesson} (${lessonType})
+                                    </span>
+                                </p>
+                                <div class="mt-2">
+                                    <span class="fale-badge fale-${student.fale.F}" title="Fluência">F</span>
+                                    <span class="fale-badge fale-${student.fale.A}" title="Pronúncia">A</span>
+                                    <span class="fale-badge fale-${student.fale.L}" title="Compreensão">L</span>
+                                    <span class="fale-badge fale-${student.fale.E}" title="Expressão">E</span>
+                                    <span class="ms-2 small">
+                                        Média: ${student.average.toFixed(1)}
+                                    </span>
+                                </div>
+                            </div>
+                            <div>
+                                <button class="btn btn-sm btn-outline-primary" onclick="editStudent(${student.id})">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `);
+            });
+            
+            // Atualizar filtro de lições
+            updateLessonFilter();
+        }
+        
+        function filterStudents() {
+            updateStudentsList();
+        }
+        
+        function updateLessonFilter() {
+            const filter = $('#filterLesson');
+            const currentValue = filter.val();
+            
+            // Obter lições únicas
+            const lessons = [...new Set(appData.students.map(s => s.nextLesson))].sort((a, b) => a - b);
+            
+            filter.empty().append('<option value="">Todas as lições</option>');
+            lessons.forEach(lesson => {
+                filter.append(`<option value="${lesson}">Lição ${lesson}</option>`);
+            });
+            
+            if (currentValue) {
+                filter.val(currentValue);
+            }
+        }
+        
+        // =============================================
+        // DASHBOARD E VISÃO SEMANAL
+        // =============================================
+        
+        function updateDashboard() {
+            // Estatísticas
+            $('#totalClasses').text(appData.classes.length);
+            $('#totalStudents').text(appData.students.length);
+            
+            // Aulas esta semana
+            const today = new Date();
+            const weekStart = new Date(today);
+            weekStart.setDate(today.getDate() - today.getDay());
+            const weekEnd = new Date(today);
+            weekEnd.setDate(today.getDate() + (6 - today.getDay()));
+            
+            // Contar aulas agendadas para esta semana
+            // (implementação simplificada)
+            $('#weekClasses').text('3'); // Exemplo
+            
+            // Aula de hoje
+            updateTodayClass();
+            updateUpcomingClasses();
+        }
+        
+        function updateTodayClass() {
+            const container = $('#todayClass');
+            const today = new Date().toLocaleDateString('pt-BR');
+            
+            // Encontrar turmas que têm aula hoje
+            const todayWeekday = new Date().toLocaleDateString('pt-BR', { weekday: 'long' }).toLowerCase();
+            const todayClasses = appData.classes.filter(cls => 
+                cls.days.includes(todayWeekday)
+            );
+            
+            if (todayClasses.length === 0) {
+                container.html(`
+                    <div class="text-center py-4">
+                        <i class="bi bi-emoji-smile display-4 text-muted"></i>
+                        <h5 class="mt-3">Nenhuma aula hoje!</h5>
+                        <p class="text-muted">Aproveite para planejar as próximas aulas</p>
+                    </div>
+                `);
+                return;
+            }
+            
+            let html = '<div class="list-group">';
+            todayClasses.forEach(cls => {
+                const students = appData.students.filter(s => s.classId === cls.id);
+                
+                html += `
+                    <div class="list-group-item border-0">
+                        <h6>
+                            <span class="class-badge" style="background:${cls.color};color:white;">
+                                ${cls.name}
+                            </span>
+                        </h6>
+                        <p class="mb-2">
+                            <i class="bi bi-clock me-1"></i> ${cls.time} |
+                            <i class="bi bi-people ms-2 me-1"></i> ${students.length} alunos
+                        </p>
+                        <button class="btn btn-sm btn-primary" onclick="planLesson(${cls.id})">
+                            <i class="bi bi-pencil-square me-1"></i> Planejar Aula
+                        </button>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            
+            container.html(html);
+        }
+        
+        function updateUpcomingClasses() {
+            const container = $('#upcomingClasses');
+            const nextClasses = $('#nextClassesList');
+            
+            // Próximos 3 dias
+            const upcoming = [];
+            for (let i = 1; i <= 3; i++) {
+                const date = new Date();
+                date.setDate(date.getDate() + i);
+                const weekday = date.toLocaleDateString('pt-BR', { weekday: 'long' }).toLowerCase();
+                
+                const dayClasses = appData.classes.filter(cls => 
+                    cls.days.includes(weekday)
+                );
+                
+                if (dayClasses.length > 0) {
+                    upcoming.push({
+                        date: date.toLocaleDateString('pt-BR'),
+                        weekday: date.toLocaleDateString('pt-BR', { weekday: 'long' }),
+                        classes: dayClasses
+                    });
+                }
+            }
+            
+            if (upcoming.length === 0) {
+                container.html(`
+                    <div class="text-center py-4">
+                        <p class="text-muted">Nenhuma aula nos próximos dias</p>
+                    </div>
+                `);
+                nextClasses.html('<p class="text-muted small">Nenhuma aula agendada</p>');
+                return;
+            }
+            
+            // Para dashboard
+            let html = '<div class="list-group">';
+            upcoming.slice(0, 2).forEach(day => {
+                html += `
+                    <div class="list-group-item border-0">
+                        <h6 class="mb-1">${day.weekday} - ${day.date}</h6>
+                        ${day.classes.map(cls => `
+                            <p class="mb-1 small">
+                                <span class="badge" style="background:${cls.color}">${cls.name}</span>
+                                às ${cls.time}
+                            </p>
+                        `).join('')}
+                    </div>
+                `;
+            });
+            html += '</div>';
+            container.html(html);
+            
+            // Para sidebar
+            let sidebarHtml = '';
+            upcoming.forEach(day => {
+                sidebarHtml += `
+                    <div class="mb-2">
+                        <div class="small text-muted">${day.weekday}</div>
+                        ${day.classes.map(cls => `
+                            <div class="d-flex justify-content-between align-items-center mt-1">
+                                <span class="small">${cls.name}</span>
+                                <span class="small">${cls.time}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            });
+            nextClasses.html(sidebarHtml);
+        }
+        
+        function updateWeekView() {
+            const container = $('#weekDays');
+            const daysOfWeek = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+            
+            let html = '';
+            const today = new Date();
+            
+            for (let i = 0; i < 7; i++) {
+                const date = new Date();
+                date.setDate(today.getDate() - today.getDay() + i);
+                const weekday = date.toLocaleDateString('pt-BR', { weekday: 'long' }).toLowerCase();
+                const isToday = i === today.getDay();
+                
+                const dayClasses = appData.classes.filter(cls => 
+                    cls.days.includes(weekday)
+                );
+                
+                html += `
+                    <div class="col">
+                        <div class="week-view-day ${isToday ? 'active' : ''}" onclick="showDayDetails('${weekday}')">
+                            <h6 class="mb-2">${daysOfWeek[i]}</h6>
+                            <p class="small text-muted mb-2">${date.toLocaleDateString('pt-BR')}</p>
+                            ${dayClasses.length > 0 ? dayClasses.map(cls => `
+                                <div class="mb-2">
+                                    <span class="badge" style="background:${cls.color}">${cls.name}</span>
+                                    <div class="small">${cls.time}</div>
+                                </div>
+                            `).join('') : '<p class="small text-muted">Sem aula</p>'}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            container.html(html);
+        }
+        
+        function showDayDetails(weekday) {
+            const dayNames = {
+                'domingo': 'Domingo',
+                'segunda': 'Segunda-feira',
+                'terca': 'Terça-feira',
+                'quarta': 'Quarta-feira',
+                'quinta': 'Quinta-feira',
+                'sexta': 'Sexta-feira',
+                'sabado': 'Sábado'
+            };
+            
+            const dayClasses = appData.classes.filter(cls => 
+                cls.days.includes(weekday)
+            );
+            
+            let html = `
+                <h5>${dayNames[weekday]}</h5>
+                <hr>
+            `;
+            
+            if (dayClasses.length === 0) {
+                html += '<p class="text-muted">Nenhuma aula neste dia</p>';
+            } else {
+                dayClasses.forEach(cls => {
+                    const students = appData.students.filter(s => s.classId === cls.id);
+                    
+                    html += `
+                        <div class="mb-4">
+                            <h6>
+                                <span class="class-badge" style="background:${cls.color};color:white;">
+                                    ${cls.name} - ${cls.time}
+                                </span>
+                            </h6>
+                            <p class="mb-2">${students.length} alunos</p>
+                            <button class="btn btn-sm btn-outline-primary" onclick="planLesson(${cls.id})">
+                                Planejar Aula
+                            </button>
+                        </div>
+                    `;
+                });
+            }
+            
+            $('#dayDetails').html(html);
+        }
+        
+        // =============================================
+        // PLANEJAMENTO DE AULAS
+        // =============================================
+        
+        function planLesson(classId) {
+            showSection('lessons');
+            $('#selectClassForPlanning').val(classId);
+            generateAttendanceOrder();
+        }
+        
+        function generateAttendanceOrder() {
+            const classId = $('#selectClassForPlanning').val();
+            const date = $('#planningDate').val() || new Date().toISOString().split('T')[0];
+            
+            if (!classId) {
+                alert('Selecione uma turma primeiro');
+                return;
+            }
+            
+            const cls = appData.classes.find(c => c.id == classId);
+            const students = appData.students.filter(s => s.classId == classId);
+            
+            if (students.length === 0) {
+                $('#attendanceOrder').html(`
+                    <div class="alert alert-warning">
+                        Nenhum aluno nesta turma. Adicione alunos primeiro.
+                    </div>
+                `);
+                return;
+            }
+            
+            // Ordenar: pares primeiro (menor lição), depois ímpares (menor lição)
+            const evenStudents = students.filter(s => s.nextLesson % 2 === 0)
+                .sort((a, b) => a.nextLesson - b.nextLesson);
+            const oddStudents = students.filter(s => s.nextLesson % 2 !== 0)
+                .sort((a, b) => a.nextLesson - b.nextLesson);
+            
+            const orderedStudents = [...evenStudents, ...oddStudents];
+            
+            // Gerar HTML
+            let html = `
+                <h6 class="mb-3">${cls.name} - ${new Date(date).toLocaleDateString('pt-BR')}</h6>
+                <div class="order-list-container">
+            `;
+            
+            orderedStudents.forEach((student, index) => {
+                const isEven = student.nextLesson % 2 === 0;
+                const lessonType = isEven ? 'PAR' : 'ÍMPAR';
+                const typeClass = isEven ? 'text-success' : 'text-warning';
+                
+                html += `
+                    <div class="order-list-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>${student.name}</strong>
+                                <div class="small">
+                                    Lição ${student.nextLesson} 
+                                    <span class="${typeClass}">(${lessonType})</span>
+                                </div>
+                                <div class="mt-1">
+                                    <span class="fale-badge fale-${student.fale.F}">F</span>
+                                    <span class="fale-badge fale-${student.fale.A}">A</span>
+                                    <span class="fale-badge fale-${student.fale.L}">L</span>
+                                    <span class="fale-badge fale-${student.fale.E}">E</span>
+                                    <span class="small ms-2">Média: ${student.average.toFixed(1)}</span>
+                                </div>
+                            </div>
+                            <div>
+                                <button class="btn btn-sm btn-outline-success" onclick="markAttendance(${student.id}, true)">
+                                    <i class="bi bi-check-lg"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger ms-1" onclick="markAttendance(${student.id}, false)">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            
+            $('#attendanceOrder').html(html);
+            
+            // Gerar sugestões de Peer Work
+            generatePeerWorkSuggestions(orderedStudents);
+        }
+        
+        function generatePeerWorkSuggestions(students) {
+            const evenStudents = students.filter(s => s.nextLesson % 2 === 0);
+            const oddStudents = students.filter(s => s.nextLesson % 2 !== 0);
+            
+            let suggestions = [];
+            
+            // Tentar parear pares com pares
+            for (let i = 0; i < evenStudents.length; i += 2) {
+                if (i + 1 < evenStudents.length) {
+                    const student1 = evenStudents[i];
+                    const student2 = evenStudents[i + 1];
+                    const lessonDiff = Math.abs(student1.nextLesson - student2.nextLesson);
+                    
+                    if (lessonDiff <= 2) { // Lições próximas
+                        suggestions.push({
+                            student1,
+                            student2,
+                            baseLesson: Math.min(student1.nextLesson, student2.nextLesson),
+                            type: 'par-par'
+                        });
+                    }
+                }
+            }
+            
+            // Se não houver pares suficientes, tentar misturar
+            if (suggestions.length < Math.floor(students.length / 2)) {
+                const allStudents = [...students];
+                const used = new Set();
+                
+                for (let i = 0; i < allStudents.length; i++) {
+                    if (used.has(allStudents[i].id)) continue;
+                    
+                    for (let j = i + 1; j < allStudents.length; j++) {
+                        if (used.has(allStudents[j].id)) continue;
+                        
+                        const lessonDiff = Math.abs(allStudents[i].nextLesson - allStudents[j].nextLesson);
+                        if (lessonDiff <= 3) {
+                            suggestions.push({
+                                student1: allStudents[i],
+                                student2: allStudents[j],
+                                baseLesson: Math.min(allStudents[i].nextLesson, allStudents[j].nextLesson),
+                                type: 'mixed'
+                            });
+                            used.add(allStudents[i].id);
+                            used.add(allStudents[j].id);
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // Mostrar sugestões
+            const container = $('#peerWorkPairs');
+            if (suggestions.length === 0) {
+                container.html('<p class="text-muted small">Não há pares sugeridos</p>');
+                return;
+            }
+            
+            let html = '<h6 class="mb-3">Sugestões de Peer Work</h6>';
+            suggestions.forEach((pair, index) => {
+                const typeText = pair.type === 'par-par' ? 'Par-Par' : 'Misturado';
+                const typeClass = pair.type === 'par-par' ? 'text-success' : 'text-warning';
+                
+                html += `
+                    <div class="card peer-match-card mb-2">
+                        <div class="card-body py-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="small">
+                                        <strong>${pair.student1.name}</strong> (Lição ${pair.student1.nextLesson})
+                                        <i class="bi bi-arrow-left-right mx-2"></i>
+                                        <strong>${pair.student2.name}</strong> (Lição ${pair.student2.nextLesson})
+                                    </div>
+                                    <div class="small text-muted">
+                                        Baseado na lição ${pair.baseLesson} | 
+                                        <span class="${typeClass}">${typeText}</span>
+                                    </div>
+                                </div>
+                                <button class="btn btn-sm btn-outline-primary" onclick="confirmPeerWork(${pair.student1.id}, ${pair.student2.id})">
+                                    <i class="bi bi-check-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.html(html);
+        }
+        
+        function markAttendance(studentId, present) {
+            // Implementar marcação de presença
+            alert(`Presença marcada: ${present ? 'Presente' : 'Ausente'}`);
+        }
+        
+        function confirmPeerWork(student1Id, student2Id) {
+            // Implementar confirmação de peer work
+            alert('Peer Work confirmado!');
+        }
+        
+        // =============================================
+        // RELATÓRIOS
+        // =============================================
+        
+        function generateReport() {
+            const classId = $('#reportClassSelect').val();
+            const reportType = $('#reportType').val();
+            
+            if (!classId) {
+                alert('Selecione uma turma');
+                return;
+            }
+            
+            const cls = appData.classes.find(c => c.id == classId);
+            const students = appData.students.filter(s => s.classId == classId);
+            
+            let html = `<h5>${cls.name} - Relatório</h5><hr>`;
+            
+            switch(reportType) {
+                case 'progress':
+                    html += generateProgressReport(students);
+                    break;
+                case 'attendance':
+                    html += generateAttendanceReport(students);
+                    break;
+                case 'fale':
+                    html += generateFALEReport(students);
+                    break;
+            }
+            
+            $('#reportContent').html(html);
+        }
+        
+        function generateProgressReport(students) {
+            if (students.length === 0) {
+                return '<p class="text-muted">Nenhum aluno nesta turma</p>';
+            }
+            
+            // Calcular média da turma
+            const average = students.reduce((sum, s) => sum + s.average, 0) / students.length;
+            
+            let html = `
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h3>${average.toFixed(1)}</h3>
+                                <p class="text-muted">Média da Turma</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h3>${students.length}</h3>
+                                <p class="text-muted">Total de Alunos</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h3>${Math.max(...students.map(s => s.nextLesson))}</h3>
+                                <p class="text-muted">Maior Lição</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <h6 class="mt-4 mb-3">Progresso Individual</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Aluno</th>
+                                <th>Lição</th>
+                                <th>F</th>
+                                <th>A</th>
+                                <th>L</th>
+                                <th>E</th>
+                                <th>Média</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            students.forEach(student => {
+                html += `
+                    <tr>
+                        <td>${student.name}</td>
+                        <td>${student.nextLesson}</td>
+                        <td><span class="fale-badge fale-${student.fale.F}">${student.fale.F}</span></td>
+                        <td><span class="fale-badge fale-${student.fale.A}">${student.fale.A}</span></td>
+                        <td><span class="fale-badge fale-${student.fale.L}">${student.fale.L}</span></td>
+                        <td><span class="fale-badge fale-${student.fale.E}">${student.fale.E}</span></td>
+                        <td><strong>${student.average.toFixed(1)}</strong></td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table></div>';
+            
+            return html;
+        }
+        
+        function generateAttendanceReport(students) {
+            return '<p class="text-muted">Relatório de frequência em desenvolvimento...</p>';
+        }
+        
+        function generateFALEReport(students) {
+            if (students.length === 0) {
+                return '<p class="text-muted">Nenhum aluno nesta turma</p>';
+            }
+            
+            // Contar avaliações por categoria
+            const counts = { F: {}, A: {}, L: {}, E: {} };
+            const categories = ['O', 'MB', 'B', 'R'];
+            
+            categories.forEach(cat => {
+                counts.F[cat] = students.filter(s => s.fale.F === cat).length;
+                counts.A[cat] = students.filter(s => s.fale.A === cat).length;
+                counts.L[cat] = students.filter(s => s.fale.L === cat).length;
+                counts.E[cat] = students.filter(s => s.fale.E === cat).length;
+            });
+            
+            let html = `
+                <h6 class="mb-3">Distribuição das Avaliações F.A.L.E</h6>
+                <div class="row">
+            `;
+            
+            ['F', 'A', 'L', 'E'].forEach(skill => {
+                const skillName = {
+                    'F': 'Fluência',
+                    'A': 'Pronúncia',
+                    'L': 'Compreensão',
+                    'E': 'Expressão'
+                }[skill];
+                
+                html += `
+                    <div class="col-md-3 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6>${skillName} (${skill})</h6>
+                                ${categories.map(cat => `
+                                    <div class="d-flex justify-content-between small mb-1">
+                                        <span>${cat}:</span>
+                                        <span>${counts[skill][cat]} alunos</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            
+            return html;
+        }
+        
+        // =============================================
+        // FUNÇÕES AUXILIARES
+        // =============================================
+        
+        function editClass(classId) {
+            // Implementar edição de turma
+            alert('Edição de turma em desenvolvimento...');
+        }
+        
+        function deleteClass(classId) {
+            if (confirm('Tem certeza que deseja excluir esta turma?')) {
+                appData.classes = appData.classes.filter(c => c.id !== classId);
+                saveData();
+            }
+        }
+        
+        function editStudent(studentId) {
+            // Implementar edição de aluno
+            alert('Edição de aluno em desenvolvimento...');
+        }
+        
+        // =============================================
+        // INICIALIZAÇÃO COMPLETA
+        // =============================================
+        
+        // Criar dados de exemplo se não houver dados
+        if (!localStorage.getItem('englishPlannerData')) {
+            appData = {
+                classes: [
+                    {
+                        id: 1,
+                        name: "INT W (Seg-Qua) 16h",
+                        days: ["segunda", "quarta"],
+                        time: "16:00",
+                        color: "#3498db"
+                    },
+                    {
+                        id: 2,
+                        name: "INT X (Ter-Qui) 19h",
+                        days: ["terca", "quinta"],
+                        time: "19:00",
+                        color: "#e74c3c"
+                    },
+                    {
+                        id: 3,
+                        name: "ADV Y (Sáb) 10h",
+                        days: ["sabado"],
+                        time: "10:00",
+                        color: "#2ecc71"
+                    }
+                ],
+                students: [
+                    {
+                        id: 1,
+                        name: "Jhonata",
+                        classId: 1,
+                        lastLesson: 173,
+                        nextLesson: 174,
+                        fale: { F: "MB", A: "O", L: "B", E: "MB" },
+                        average: 3.0,
+                        attendance: [],
+                        peerHistory: []
+                    },
+                    {
+                        id: 2,
+                        name: "Letícia",
+                        classId: 1,
+                        lastLesson: 169,
+                        nextLesson: 170,
+                        fale: { F: "B", A: "MB", L: "O", E: "B" },
+                        average: 2.5,
+                        attendance: [],
+                        peerHistory: []
+                    },
+                    {
+                        id: 3,
+                        name: "Cláudia",
+                        classId: 1,
+                        lastLesson: 229,
+                        nextLesson: 230,
+                        fale: { F: "O", A: "O", L: "MB", E: "O" },
+                        average: 3.75,
+                        attendance: [],
+                        peerHistory: []
+                    }
+                ],
+                lessons: [],
+                settings: {
+                    autoSave: true,
+                    theme: 'light'
+                }
+            };
+            
+            saveData();
+        }
+    </script>
+</body>
+</html>
