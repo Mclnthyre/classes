@@ -390,3 +390,42 @@ $(document).ready(function() {
         loadFromGitHub();
     }, 1000);
 });
+
+// Adicione após as outras inicializações:
+
+// Inicializar modal de presenças
+setupAttendanceModal();
+
+// Adicionar menu de relatórios
+document.addEventListener('DOMContentLoaded', function() {
+    // Adicionar item no menu
+    const nav = document.querySelector('.navbar-nav');
+    if (nav) {
+        const reportItem = document.createElement('li');
+        reportItem.className = 'nav-item';
+        reportItem.innerHTML = `
+            <a class="nav-link" href="#" id="attendanceReportLink">
+                <i class="bi bi-clipboard-data"></i> Relatório Frequência
+            </a>
+        `;
+        nav.appendChild(reportItem);
+        
+        document.getElementById('attendanceReportLink').addEventListener('click', function(e) {
+            e.preventDefault();
+            showSection('attendance-report');
+            renderAttendanceReport();
+        });
+    }
+});
+
+// Adicionar seção de relatórios no main content
+const mainContent = document.getElementById('mainContent');
+if (mainContent) {
+    mainContent.innerHTML += `
+        <section id="attendance-report" class="content-section" style="display: none;">
+            <div class="container-fluid">
+                <div id="attendanceReportContainer"></div>
+            </div>
+        </section>
+    `;
+}
