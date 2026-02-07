@@ -408,3 +408,305 @@ export function updateUI() {
     updateClassSelects();
     updateLessonFilter();
 }
+
+// Adicione estas funções após as funções de aluno:
+
+// Funções de Presença
+export function setupAttendanceModal() {
+    // Criar modal de presença dinamicamente
+    const modalHTML = `
+        <div class="modal fade" id="attendanceModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Registrar Presenças</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="attendanceDate" class="form-label">Data</label>
+                            <input type="date" id="attendanceDate" class="form-control" value="${new Date().toISOString().split('T')[0]}">
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="attendanceTable">
+                                <thead>
+                                    <tr>
+                                        <th>Aluno</th>
+                                        <th>Status</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="attendanceList">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-primary" id="saveAllAttendance">Salvar Todas</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+export function openAttendanceModal(classId) {
+    const modal = new bootstrap.Modal(document.getElementById('attendanceModal'));
+    const students = appData.students.filter(s => s.classId === classId);
+    const classObj = appData.classes.find(c => c.id === classId);
+    
+    if (!classObj) {
+        showAlert('Turma não encontrada!', 'danger');
+        return;
+    }
+    
+    document.querySelector('.modal-title').textContent = `Presenças - ${classObj.name}`;
+    
+    const dateInput = document.getElementById('attendanceDate');
+    const attendanceList = document.getElementById('attendanceList');
+    const selectedDate = dateInput.value;
+    
+    // Preencher lista de alunos
+    attendanceList.innerHTML = '';
+    students.forEach(student => {
+        const existingAttendance = student.attendance?.find(a => a.date === selectedDate);
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${student.name}</td>
+            <td>
+                <select class="form-select form-select-sm attendance-status" data-student-id="${student.id}">
+                    <option value="present" ${existingAttendance?.status === 'present' ? 'selected' : ''}>Presente</option>
+                    <option value="absent" ${existingAttendance?.status === 'absent' ? 'selected' : ''}>Ausente</option>
+                    <option value="excused" ${existingAttendance?.status === 'excused' ? 'selected' : ''}>Justificado</option>
+                </select>
+            </td>
+            <td>
+                <button class="btn btn-sm btn-success save-single-attendance" data-student-id="${student.id}">
+                    <i class="bi bi-check"></i> Salvar
+                </button>
+            </td>
+        `;
+        attendanceList.appendChild(row);
+    });
+    
+    // Atualizar quando a data mudar
+    dateInput.addEventListener('change', () => {
+        openAttendanceModal(classId);
+    });
+    
+    // Salvar individual
+    document.querySelectorAll('.save-single-attendance').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const studentId = parseInt(this.dataset.studentId);
+            const status = document.querySelector(`select[data-student-id="${studentId}"]`).value;
+            
+            if (markAttendance(studentId, selectedDate, status)) {
+                showAlert('Presença salva com sucesso!', 'success');
+                this.innerHTML = '<i class="bi bi-check-all"></i> Salvo';
+                this.classList.remove('btn-success');
+                this.classList.add('btn-secondary');
+                this.disabled = true;
+            }
+        });
+    });
+    
+    // Salvar todas
+    document.getElementById('saveAllAttendance').onclick = () => {
+        let saved = 0;
+        students.forEach(student => {
+            const status = document.querySelector(`select[data-student-id="${student.id}"]`).value;
+            if (markAttendance(student.id, selectedDate, status)) {
+                saved++;
+            }
+        });
+        
+        showAlert(`${saved} presenças salvas com sucesso!`, 'success');
+        modal.hide();
+    };
+    
+    modal.show();
+}
+
+// Funções de Relatório de Frequência
+export function renderAttendanceReport() {
+    const container = document.getElementById('attendanceReportContainer');
+    if (!container) return;
+    
+    container.innerHTML = `
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Relatório de Frequência</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="attendanceClass" class="form-label">Turma</label>
+                        <select id="attendanceClass" class="form-select">
+                            <option value="">Todas as Turmas</option>
+                            ${appData.classes.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="startDate" class="form-label">Data Inicial</label>
+                        <input type="date" id="startDate" class="form-control" value="${new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0]}">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="endDate" class="form-label">Data Final</label>
+                        <input type="date" id="endDate" class="form-control" value="${new Date().toISOString().split('T')[0]}">
+                    </div>
+                </div>
+                <button id="generateAttendanceReport" class="btn btn-primary">
+                    <i class="bi bi-graph-up"></i> Gerar Relatório
+                </button>
+                <div id="reportResults" class="mt-4"></div>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('generateAttendanceReport').addEventListener('click', generateAttendanceReport);
+}
+
+function generateAttendanceReport() {
+    const classId = document.getElementById('attendanceClass').value;
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    
+    if (!startDate || !endDate) {
+        showAlert('Selecione as datas!', 'warning');
+        return;
+    }
+    
+    const report = getAttendanceReport(classId ? parseInt(classId) : null, startDate, endDate);
+    const resultsDiv = document.getElementById('reportResults');
+    
+    let html = `
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h6 class="mb-0">Resumo Geral</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="card bg-success text-white mb-3">
+                            <div class="card-body text-center">
+                                <h4 class="card-title">${report.summary.totalPresent}</h4>
+                                <p class="card-text">Presentes</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-danger text-white mb-3">
+                            <div class="card-body text-center">
+                                <h4 class="card-title">${report.summary.totalAbsent}</h4>
+                                <p class="card-text">Ausentes</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-warning text-dark mb-3">
+                            <div class="card-body text-center">
+                                <h4 class="card-title">${report.summary.totalExcused}</h4>
+                                <p class="card-text">Justificados</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-info text-white mb-3">
+                            <div class="card-body text-center">
+                                <h4 class="card-title">${report.summary.attendanceRate.toFixed(1)}%</h4>
+                                <p class="card-text">Taxa de Presença</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0">Detalhes por Aluno</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Aluno</th>
+                                <th>Presente</th>
+                                <th>Ausente</th>
+                                <th>Justificado</th>
+                                <th>Taxa</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+    `;
+    
+    report.students.forEach(student => {
+        const totalClasses = student.totals.present + student.totals.absent + student.totals.excused;
+        const attendanceRate = totalClasses > 0 ? (student.totals.present / totalClasses) * 100 : 0;
+        let statusClass = 'success';
+        
+        if (attendanceRate < 75) statusClass = 'danger';
+        else if (attendanceRate < 85) statusClass = 'warning';
+        
+        html += `
+            <tr>
+                <td>${student.name}</td>
+                <td><span class="badge bg-success">${student.totals.present}</span></td>
+                <td><span class="badge bg-danger">${student.totals.absent}</span></td>
+                <td><span class="badge bg-warning">${student.totals.excused}</span></td>
+                <td>
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar bg-${statusClass}" 
+                             style="width: ${attendanceRate}%">
+                            ${attendanceRate.toFixed(1)}%
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <span class="badge bg-${statusClass}">
+                        ${attendanceRate >= 85 ? 'Ótimo' : attendanceRate >= 75 ? 'Atenção' : 'Crítico'}
+                    </span>
+                </td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    resultsDiv.innerHTML = html;
+}
+
+// Atualizar a função confirmPeerWork no UI
+export function setupPeerConfirmation(student1Id, student2Id) {
+    if (confirm('Confirmar este peer work? Isso será salvo no histórico dos alunos.')) {
+        if (confirmPeerWork(student1Id, student2Id)) {
+            showAlert('Peer work confirmado e salvo no histórico!', 'success');
+            // Atualizar a interface
+            renderClassDetails(appData.students.find(s => s.id === student1Id)?.classId);
+        }
+    }
+}
+
+// Adicionar botão de presença na visualização da turma
+export function addAttendanceButton(classId) {
+    const container = document.getElementById('classActions');
+    if (!container) return;
+    
+    const button = document.createElement('button');
+    button.className = 'btn btn-info me-2';
+    button.innerHTML = '<i class="bi bi-calendar-check"></i> Registrar Presenças';
+    button.onclick = () => openAttendanceModal(classId);
+    container.appendChild(button);
+}
