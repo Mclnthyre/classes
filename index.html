@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive English Planner</title>
+    <title>English Planner Pro - Sistema de Gerenciamento de Aulas</title>
     
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -11,526 +11,657 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
     <!-- Nosso CSS -->
-    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/style.css">
+    
+    <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📚</text></svg>">
 </head>
 <body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="#">
-                <i class="bi bi-journal-text me-2"></i>
-                Interactive English Planner
-            </a>
-            <div class="d-flex align-items-center">
-                <span class="me-3 text-muted d-none d-md-block" id="currentDate"></span>
-                <button class="btn btn-outline-primary btn-sm" id="toggleSidebarBtn">
-                    <i class="bi bi-list"></i>
-                </button>
-            </div>
-        </div>
-    </nav>
+    <!-- Layout Principal -->
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-dark sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <div class="sidebar-header text-center mb-4">
+                        <h2 class="text-white"><i class="bi bi-journal-bookmark"></i> English Planner</h2>
+                        <p class="text-muted">Sistema de Gestão de Aulas</p>
+                    </div>
+                    
+                    <ul class="nav flex-column" id="main-menu">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#" data-section="dashboard">
+                                <i class="bi bi-speedometer2"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-section="classes">
+                                <i class="bi bi-people-fill"></i> Turmas
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-section="students">
+                                <i class="bi bi-person-vcard"></i> Alunos
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-section="planning">
+                                <i class="bi bi-calendar-week"></i> Planejamento
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-section="attendance">
+                                <i class="bi bi-clipboard-check"></i> Frequência
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-section="reports">
+                                <i class="bi bi-bar-chart-line"></i> Relatórios
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-section="settings">
+                                <i class="bi bi-gear"></i> Configurações
+                            </a>
+                        </li>
+                    </ul>
+                    
+                    <div class="sidebar-footer mt-4">
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-outline-info" id="export-data">
+                                <i class="bi bi-download"></i> Exportar Dados
+                            </button>
+                            <button class="btn btn-outline-warning" id="import-data">
+                                <i class="bi bi-upload"></i> Importar Dados
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </nav>
 
-    <!-- Mobile Sidebar Overlay -->
-    <div class="mobile-sidebar-overlay" id="mobileSidebarOverlay"></div>
+            <!-- Conteúdo Principal -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <!-- Navbar Top -->
+                <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom py-3">
+                    <div class="container-fluid">
+                        <button class="btn btn-dark d-md-none" type="button" id="sidebarToggle">
+                            <i class="bi bi-list"></i>
+                        </button>
+                        
+                        <div class="navbar-brand">
+                            <h4 id="current-section-title">Dashboard</h4>
+                            <small class="text-muted" id="current-section-subtitle">Visão geral do sistema</small>
+                        </div>
+                        
+                        <div class="d-flex align-items-center">
+                            <div class="form-check form-switch me-3">
+                                <input class="form-check-input" type="checkbox" id="darkModeSwitch">
+                                <label class="form-check-label" for="darkModeSwitch">Tema Escuro</label>
+                            </div>
+                            <button class="btn btn-primary" id="add-new-btn">
+                                <i class="bi bi-plus-circle"></i> Novo
+                            </button>
+                        </div>
+                    </div>
+                </nav>
 
-    <!-- Sidebar -->
-    <div class="sidebar" id="sidebar">
-        <div class="p-3">
-            <div class="mb-4">
-                <h5 class="text-primary mb-3">Menu Principal</h5>
-                <div class="list-group list-group-flush">
-                    <a href="#" class="list-group-item list-group-item-action border-0 py-3 menu-link" data-section="dashboard">
-                        <i class="bi bi-speedometer2 me-2"></i> Dashboard
-                    </a>
-                    <a href="#" class="list-group-item list-group-item-action border-0 py-3 menu-link" data-section="week-view">
-                        <i class="bi bi-calendar-week me-2"></i> Visão Semanal
-                    </a>
-                    <a href="#" class="list-group-item list-group-item-action border-0 py-3 menu-link" data-section="classes">
-                        <i class="bi bi-people me-2"></i> Turmas
-                    </a>
-                    <a href="#" class="list-group-item list-group-item-action border-0 py-3 menu-link" data-section="students">
-                        <i class="bi bi-person me-2"></i> Alunos
-                    </a>
-                    <a href="#" class="list-group-item list-group-item-action border-0 py-3 menu-link" data-section="lessons">
-                        <i class="bi bi-journal-check me-2"></i> Planejamento
-                    </a>
-                    <a href="#" class="list-group-item list-group-item-action border-0 py-3 menu-link" data-section="reports">
-                        <i class="bi bi-graph-up me-2"></i> Relatórios
-                    </a>
-                    <a href="#" class="list-group-item list-group-item-action border-0 py-3 menu-link" data-section="attendance-report">
-                        <i class="bi bi-clipboard-data me-2"></i> Frequência
-                    </a>
-                    <a href="#" class="list-group-item list-group-item-action border-0 py-3 menu-link" data-section="settings">
-                        <i class="bi bi-gear me-2"></i> Configurações
-                    </a>
-                </div>
-            </div>
-            
-            <hr>
-            
-            <div class="mb-4">
-                <h6 class="text-muted mb-3">Próximas Aulas</h6>
-                <div id="nextClassesList">
-                    <p class="text-muted small">Carregando...</p>
-                </div>
-            </div>
-            
-            <hr>
-            
-            <div class="mt-4">
-                <button class="btn btn-primary w-100 mb-2" id="saveToGitHubBtn">
-                    <i class="bi bi-cloud-upload me-2"></i> Salvar no GitHub
-                </button>
-                <button class="btn btn-export w-100 mb-2" id="exportDataBtn">
-                    <i class="bi bi-download me-2"></i> Exportar Dados
-                </button>
-                <button class="btn btn-outline-secondary w-100 menu-link" data-section="settings">
-                    <i class="bi bi-gear me-2"></i> Configurações
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Main Content -->
-    <div class="main-content" id="mainContent">
-        <!-- Dashboard Section -->
-        <section id="dashboard" class="content-section">
-            <div class="row mb-4">
-                <div class="col-12">
-                    <h2>Dashboard</h2>
-                    <p class="text-muted">Visão geral do seu planejamento</p>
-                </div>
-            </div>
-            
-            <div class="row mb-4">
-                <div class="col-md-3 mb-3">
-                    <div class="card bg-primary text-white">
-                        <div class="card-body">
-                            <h1 class="card-title" id="totalClasses">0</h1>
-                            <p class="card-text">Turmas Ativas</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <div class="card bg-success text-white">
-                        <div class="card-body">
-                            <h1 class="card-title" id="totalStudents">0</h1>
-                            <p class="card-text">Total de Alunos</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <div class="card bg-warning text-white">
-                        <div class="card-body">
-                            <h1 class="card-title" id="weekClasses">0</h1>
-                            <p class="card-text">Aulas Esta Semana</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <div class="card bg-info text-white">
-                        <div class="card-body">
-                            <h1 class="card-title" id="pendingPlanning">0</h1>
-                            <p class="card-text">Planejamentos Pendentes</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-header bg-white">
-                            <h5 class="mb-0">Aula de Hoje</h5>
-                        </div>
-                        <div class="card-body">
-                            <div id="todayClass">
-                                <p class="text-muted">Carregando...</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-header bg-white">
-                            <h5 class="mb-0">Próximas Aulas</h5>
-                        </div>
-                        <div class="card-body">
-                            <div id="upcomingClasses">
-                                <p class="text-muted">Carregando...</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Week View Section -->
-        <section id="week-view" class="content-section" style="display: none;">
-            <div class="row mb-4">
-                <div class="col-12">
-                    <h2>Visão Semanal</h2>
-                    <p class="text-muted">Todas as suas turmas na semana</p>
-                </div>
-            </div>
-            
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-body">
-                            <div class="row" id="weekDays">
-                                <p class="text-muted">Carregando...</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="row">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header bg-white">
-                            <h5 class="mb-0">Detalhes do Dia</h5>
-                        </div>
-                        <div class="card-body">
-                            <div id="dayDetails">
-                                <p class="text-muted">Selecione um dia da semana</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Classes Section -->
-        <section id="classes" class="content-section" style="display: none;">
-            <div class="row mb-4">
-                <div class="col-12 d-flex justify-content-between align-items-center">
-                    <div>
-                        <h2>Turmas</h2>
-                        <p class="text-muted">Gerencie suas turmas</p>
-                    </div>
-                    <button class="btn btn-primary" id="addClassBtn">
-                        <i class="bi bi-plus-circle me-2"></i> Nova Turma
-                    </button>
-                </div>
-            </div>
-            
-            <div class="row">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-body">
-                            <div id="classesList">
-                                <p class="text-muted">Carregando...</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Students Section -->
-        <section id="students" class="content-section" style="display: none;">
-            <div class="row mb-4">
-                <div class="col-12 d-flex justify-content-between align-items-center">
-                    <div>
-                        <h2>Alunos</h2>
-                        <p class="text-muted">Gerencie todos os alunos</p>
-                    </div>
-                    <button class="btn btn-primary" id="addStudentBtn">
-                        <i class="bi bi-person-plus me-2"></i> Novo Aluno
-                    </button>
-                </div>
-            </div>
-            
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <input type="text" class="form-control" placeholder="Buscar aluno..." id="searchStudent">
-                </div>
-                <div class="col-md-3">
-                    <select class="form-control" id="filterClass">
-                        <option value="">Todas as turmas</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <select class="form-control" id="filterLesson">
-                        <option value="">Todas as lições</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="row">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-body">
-                            <div id="studentsList">
-                                <p class="text-muted">Carregando...</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Lessons Planning Section -->
-        <section id="lessons" class="content-section" style="display: none;">
-            <div class="row mb-4">
-                <div class="col-12">
-                    <h2>Planejamento de Aulas</h2>
-                    <p class="text-muted">Planeje suas aulas interativas</p>
-                </div>
-            </div>
-            
-            <div class="row mb-3">
-                <div class="col-md-4">
-                    <select class="form-control" id="selectClassForPlanning">
-                        <option value="">Selecione uma turma</option>
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <input type="date" class="form-control" id="planningDate" value="">
-                </div>
-                <div class="col-md-4">
-                    <button class="btn btn-primary w-100" id="generateOrderBtn">
-                        <i class="bi bi-magic me-2"></i> Gerar Ordem
-                    </button>
-                </div>
-            </div>
-            
-            <div class="row">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header bg-white">
-                            <h5 class="mb-0">Ordem de Atendimento</h5>
-                        </div>
-                        <div class="card-body">
-                            <div id="attendanceOrder">
-                                <p class="text-muted">Selecione uma turma e clique em "Gerar Ordem"</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="row mt-4">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header bg-white">
-                            <h5 class="mb-0">Planejamento Interativo</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="card phase-card phase-opening">
-                                        <div class="card-body">
-                                            <h6>Opening (5 min)</h6>
-                                            <p class="small text-muted">Introdução e objetivos</p>
-                                        </div>
-                                    </div>
-                                    <div class="card phase-card phase-self-study">
-                                        <div class="card-body">
-                                            <h6>Self Study (15 min)</h6>
-                                            <p class="small text-muted">Estudo individual</p>
-                                        </div>
-                                    </div>
-                                    <div class="card phase-card phase-teacher-support">
-                                        <div class="card-body">
-                                            <h6>Teacher Support (20 min)</h6>
-                                            <p class="small text-muted">Suporte individualizado</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="card phase-card phase-peer-work">
-                                        <div class="card-body">
-                                            <h6>Peer Work (15 min)</h6>
-                                            <p class="small text-muted">Trabalho em pares</p>
-                                            <div id="peerWorkPairs">
-                                                <p class="small text-muted">As sugestões de pares aparecerão aqui</p>
+                <!-- Seções de Conteúdo -->
+                <div id="content-sections">
+                    <!-- Dashboard -->
+                    <section id="dashboard-section" class="content-section">
+                        <div class="row mt-4">
+                            <!-- Cards de Estatísticas -->
+                            <div class="col-xl-3 col-md-6 mb-4">
+                                <div class="card border-left-primary h-100">
+                                    <div class="card-body">
+                                        <div class="row no-gutters align-items-center">
+                                            <div class="col mr-2">
+                                                <div class="text-xs font-weight-bold text-primary mb-1">Turmas Ativas</div>
+                                                <div class="h5 mb-0 font-weight-bold" id="stats-classes">0</div>
+                                            </div>
+                                            <div class="col-auto">
+                                                <i class="bi bi-people-fill fa-2x text-primary"></i>
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="card phase-card phase-closing">
-                                        <div class="card-body">
-                                            <h6>Closing (5 min)</h6>
-                                            <p class="small text-muted">Revisão e feedback</p>
+                                </div>
+                            </div>
+                            
+                            <div class="col-xl-3 col-md-6 mb-4">
+                                <div class="card border-left-success h-100">
+                                    <div class="card-body">
+                                        <div class="row no-gutters align-items-center">
+                                            <div class="col mr-2">
+                                                <div class="text-xs font-weight-bold text-success mb-1">Total de Alunos</div>
+                                                <div class="h5 mb-0 font-weight-bold" id="stats-students">0</div>
+                                            </div>
+                                            <div class="col-auto">
+                                                <i class="bi bi-person-badge fa-2x text-success"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-xl-3 col-md-6 mb-4">
+                                <div class="card border-left-warning h-100">
+                                    <div class="card-body">
+                                        <div class="row no-gutters align-items-center">
+                                            <div class="col mr-2">
+                                                <div class="text-xs font-weight-bold text-warning mb-1">Aulas Hoje</div>
+                                                <div class="h5 mb-0 font-weight-bold" id="stats-today-classes">0</div>
+                                            </div>
+                                            <div class="col-auto">
+                                                <i class="bi bi-calendar-day fa-2x text-warning"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-xl-3 col-md-6 mb-4">
+                                <div class="card border-left-info h-100">
+                                    <div class="card-body">
+                                        <div class="row no-gutters align-items-center">
+                                            <div class="col mr-2">
+                                                <div class="text-xs font-weight-bold text-info mb-1">Frequência Média</div>
+                                                <div class="h5 mb-0 font-weight-bold" id="stats-attendance">0%</div>
+                                            </div>
+                                            <div class="col-auto">
+                                                <i class="bi bi-clipboard-check fa-2x text-info"></i>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Reports Section -->
-        <section id="reports" class="content-section" style="display: none;">
-            <div class="row mb-4">
-                <div class="col-12">
-                    <h2>Relatórios</h2>
-                    <p class="text-muted">Análise de progresso e desempenho</p>
-                </div>
-            </div>
-            
-            <div class="row mb-4">
-                <div class="col-md-4">
-                    <div class="card">
-                        <div class="card-body">
-                            <select class="form-control" id="reportClassSelect">
-                                <option value="">Selecione uma turma</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card">
-                        <div class="card-body">
-                            <select class="form-control" id="reportType">
-                                <option value="progress">Progresso Geral</option>
-                                <option value="fale">Avaliações F.A.L.E</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card">
-                        <div class="card-body">
-                            <button class="btn btn-primary w-100" id="generateReportBtn">
-                                <i class="bi bi-file-earmark-text me-2"></i> Gerar Relatório
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="row">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-body">
-                            <div id="reportContent">
-                                <p class="text-muted">Selecione uma turma e clique em "Gerar Relatório"</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Attendance Report Section -->
-        <section id="attendance-report" class="content-section" style="display: none;">
-            <div class="container-fluid">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2><i class="bi bi-calendar-check me-2"></i>Relatório de Frequência</h2>
-                </div>
-                <div id="attendanceReportContainer">
-                    <p class="text-muted">Carregando...</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- Settings Section -->
-<section id="settings" class="content-section" style="display: none;">
-            <div class="row mb-4">
-                <div class="col-12">
-                    <h2>Configurações</h2>
-                    <p class="text-muted">Configure sua plataforma</p>
-                </div>
-            </div>
-            
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-header bg-white">
-                            <h5 class="mb-0">Configuração do GitHub</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="mb-3">
-                                <label class="form-label">Nome de Usuário</label>
-                                <input type="text" class="form-control" id="githubUsername" placeholder="seu-usuario">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Repositório</label>
-                                <input type="text" class="form-control" id="githubRepo" placeholder="seu-repositorio">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Token de Acesso</label>
-                                <input type="password" class="form-control" id="githubToken" placeholder="token-github">
-                            </div>
-                            <button class="btn btn-primary" id="saveGitHubConfigBtn">
-                                <i class="bi bi-save me-2"></i> Salvar Configuração
-                            </button>
-                            <button class="btn btn-outline-success ms-2" id="loadFromGitHubBtn">
-                                <i class="bi bi-cloud-download me-2"></i> Carregar do GitHub
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-header bg-white">
-                            <h5 class="mb-0">Preferências</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="mb-3">
-                                <label class="form-label">Auto-save</label>
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="autoSave" checked>
-                                    <label class="form-check-label">Salvar automaticamente</label>
+                        
+                        <!-- Gráficos e Listas -->
+                        <div class="row">
+                            <div class="col-lg-8">
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <h6 class="m-0 font-weight-bold">Progresso das Turmas</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="classes-progress" class="pt-3">
+                                            <!-- Conteúdo será gerado por JavaScript -->
+                                            <p class="text-muted">Nenhuma turma cadastrada ainda.</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">Notificações</label>
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="notifications" checked>
-                                    <label class="form-check-label">Mostrar notificações</label>
+                            
+                            <div class="col-lg-4">
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <h6 class="m-0 font-weight-bold">Próximas Aulas</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="upcoming-classes">
+                                            <!-- Conteúdo será gerado por JavaScript -->
+                                            <p class="text-muted">Nenhuma aula agendada para hoje.</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">Tema</label>
-                                <select class="form-control" id="themeSelect">
-                                    <option value="light">Claro</option>
-                                    <option value="dark">Escuro</option>
+                        </div>
+                        
+                        <!-- Alunos com Baixa Frequência -->
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="m-0 font-weight-bold">Alunos com Baixa Frequência</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="low-attendance-students">
+                                            <p class="text-muted">Todos os alunos estão com frequência regular.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Turmas -->
+                    <section id="classes-section" class="content-section d-none">
+                        <div class="d-flex justify-content-between align-items-center mt-4 mb-3">
+                            <h2>Gerenciamento de Turmas</h2>
+                            <button class="btn btn-primary" id="add-class-btn">
+                                <i class="bi bi-plus-circle"></i> Nova Turma
+                            </button>
+                        </div>
+                        
+                        <!-- Filtros -->
+                        <div class="row mb-4">
+                            <div class="col-md-4">
+                                <input type="text" class="form-control" id="class-search" placeholder="Buscar turma...">
+                            </div>
+                            <div class="col-md-4">
+                                <select class="form-select" id="class-day-filter">
+                                    <option value="">Filtrar por dia</option>
+                                    <option value="segunda">Segunda-feira</option>
+                                    <option value="terca">Terça-feira</option>
+                                    <option value="quarta">Quarta-feira</option>
+                                    <option value="quinta">Quinta-feira</option>
+                                    <option value="sexta">Sexta-feira</option>
+                                    <option value="sabado">Sábado</option>
                                 </select>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="row mt-4">
-                <div class="col-md-12">
-                    <div class="card">
-                        <div class="card-header bg-white">
-                            <h5 class="mb-0">Backup de Dados</h5>
+                        
+                        <!-- Lista de Turmas -->
+                        <div class="row" id="classes-list">
+                            <!-- As turmas serão inseridas aqui por JavaScript -->
+                            <div class="col-12">
+                                <p class="text-muted">Nenhuma turma cadastrada. Clique em "Nova Turma" para começar.</p>
+                            </div>
                         </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <button class="btn btn-outline-primary w-100 mb-2" id="exportDataBtn2">
-                                        <i class="bi bi-download me-2"></i> Exportar Dados (JSON)
-                                    </button>
-                                    <p class="small text-muted">Baixe um backup completo dos seus dados</p>
-                                </div>
-                                <div class="col-md-6">
-                                    <button class="btn btn-outline-success w-100 mb-2" id="importDataBtn">
-                                        <i class="bi bi-upload me-2"></i> Importar Dados
-                                    </button>
-                                    <p class="small text-muted">Restaurar dados de um backup</p>
+                    </section>
+
+                    <!-- Alunos -->
+                    <section id="students-section" class="content-section d-none">
+                        <div class="d-flex justify-content-between align-items-center mt-4 mb-3">
+                            <h2>Gerenciamento de Alunos</h2>
+                            <button class="btn btn-primary" id="add-student-btn">
+                                <i class="bi bi-plus-circle"></i> Novo Aluno
+                            </button>
+                        </div>
+                        
+                        <!-- Filtros -->
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <input type="text" class="form-control" id="student-search" placeholder="Buscar aluno...">
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select" id="student-class-filter">
+                                    <option value="">Todas as turmas</option>
+                                    <!-- Opções serão preenchidas por JavaScript -->
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select" id="student-fale-filter">
+                                    <option value="">Filtrar por F.A.L.E</option>
+                                    <option value="O">Ótimo</option>
+                                    <option value="MB">Muito Bom</option>
+                                    <option value="B">Bom</option>
+                                    <option value="R">Regular</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Tabela de Alunos -->
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover" id="students-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Nome</th>
+                                                <th>Turma</th>
+                                                <th>Última Lição</th>
+                                                <th>Próxima Lição</th>
+                                                <th>F.A.L.E</th>
+                                                <th>Média</th>
+                                                <th>Ações</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="students-table-body">
+                                            <!-- Alunos serão inseridos aqui por JavaScript -->
+                                            <tr>
+                                                <td colspan="7" class="text-center">Nenhum aluno cadastrado.</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </section>
+
+                    <!-- Planejamento -->
+                    <section id="planning-section" class="content-section d-none">
+                        <div class="d-flex justify-content-between align-items-center mt-4 mb-3">
+                            <h2>Planejamento de Aulas</h2>
+                            <div>
+                                <button class="btn btn-success me-2" id="generate-order-btn">
+                                    <i class="bi bi-sort-numeric-down"></i> Gerar Ordem
+                                </button>
+                                <button class="btn btn-info" id="suggest-pairs-btn">
+                                    <i class="bi bi-people-fill"></i> Sugerir Pares
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Seleção de Turma -->
+                        <div class="row mb-4">
+                            <div class="col-md-4">
+                                <select class="form-select" id="planning-class-select">
+                                    <option value="">Selecione uma turma</option>
+                                    <!-- Opções serão preenchidas por JavaScript -->
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <input type="date" class="form-control" id="planning-date" value="">
+                            </div>
+                        </div>
+                        
+                        <!-- Ordem de Atendimento -->
+                        <div class="row">
+                            <div class="col-lg-6">
+                                <div class="card mb-4">
+                                    <div class="card-header bg-primary text-white">
+                                        <h6 class="m-0 font-weight-bold">
+                                            <i class="bi bi-list-ol"></i> Ordem de Atendimento
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="attendance-order-list">
+                                            <p class="text-muted">Selecione uma turma para gerar a ordem de atendimento.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Sugestão de Pares -->
+                            <div class="col-lg-6">
+                                <div class="card mb-4">
+                                    <div class="card-header bg-success text-white">
+                                        <h6 class="m-0 font-weight-bold">
+                                            <i class="bi bi-people-fill"></i> Sugestão de Peer Work
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="peer-suggestions">
+                                            <p class="text-muted">Clique em "Sugerir Pares" para gerar combinações.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Histórico de Pares -->
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="m-0 font-weight-bold">Histórico de Peer Work</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="peer-history">
+                                            <p class="text-muted">Nenhum histórico registrado.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Frequência -->
+                    <section id="attendance-section" class="content-section d-none">
+                        <div class="d-flex justify-content-between align-items-center mt-4 mb-3">
+                            <h2>Registro de Frequência</h2>
+                            <button class="btn btn-primary" id="register-attendance-btn">
+                                <i class="bi bi-clipboard-check"></i> Registrar Frequência
+                            </button>
+                        </div>
+                        
+                        <!-- Filtros -->
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <select class="form-select" id="attendance-class-select">
+                                    <option value="">Selecione uma turma</option>
+                                    <!-- Opções serão preenchidas por JavaScript -->
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="date" class="form-control" id="attendance-date" value="">
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn btn-outline-secondary" id="load-attendance-btn">
+                                    Carregar Frequência
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Tabela de Frequência -->
+                        <div class="card">
+                            <div class="card-body">
+                                <div id="attendance-table-container">
+                                    <p class="text-muted">Selecione uma turma e uma data para ver a frequência.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Estatísticas de Frequência -->
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="m-0 font-weight-bold">Frequência por Turma</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="attendance-by-class">
+                                            <!-- Conteúdo será gerado por JavaScript -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="m-0 font-weight-bold">Histórico de Frequência</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="attendance-history">
+                                            <!-- Conteúdo será gerado por JavaScript -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Relatórios -->
+                    <section id="reports-section" class="content-section d-none">
+                        <div class="d-flex justify-content-between align-items-center mt-4 mb-3">
+                            <h2>Relatórios e Análises</h2>
+                            <div>
+                                <button class="btn btn-success me-2" id="export-report-btn">
+                                    <i class="bi bi-file-earmark-pdf"></i> Exportar PDF
+                                </button>
+                                <button class="btn btn-primary" id="refresh-reports-btn">
+                                    <i class="bi bi-arrow-clockwise"></i> Atualizar
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Filtros de Relatórios -->
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <select class="form-select" id="report-class-select">
+                                    <option value="">Todas as turmas</option>
+                                    <!-- Opções serão preenchidas por JavaScript -->
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="month" class="form-control" id="report-month" value="">
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select" id="report-type">
+                                    <option value="progress">Progresso</option>
+                                    <option value="attendance">Frequência</option>
+                                    <option value="fale">Avaliação F.A.L.E</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Relatórios -->
+                        <div class="row">
+                            <div class="col-lg-6">
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <h6 class="m-0 font-weight-bold">Progresso por Turma</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="progress-report">
+                                            <!-- Conteúdo será gerado por JavaScript -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-lg-6">
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <h6 class="m-0 font-weight-bold">Distribuição F.A.L.E</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="fale-distribution">
+                                            <!-- Conteúdo será gerado por JavaScript -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Tabela Detalhada -->
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="m-0 font-weight-bold">Relatório Detalhado</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="detailed-report">
+                                            <!-- Conteúdo será gerado por JavaScript -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Configurações -->
+                    <section id="settings-section" class="content-section d-none">
+                        <div class="d-flex justify-content-between align-items-center mt-4 mb-3">
+                            <h2>Configurações do Sistema</h2>
+                            <button class="btn btn-primary" id="save-settings-btn">
+                                <i class="bi bi-save"></i> Salvar Configurações
+                            </button>
+                        </div>
+                        
+                        <!-- Configurações Gerais -->
+                        <div class="row">
+                            <div class="col-lg-6">
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <h6 class="m-0 font-weight-bold">Configurações Gerais</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="auto-save">
+                                                <label class="form-check-label" for="auto-save">Salvamento automático</label>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="notifications">
+                                                <label class="form-check-label" for="notifications">Notificações</label>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Tema</label>
+                                            <select class="form-select" id="theme-select">
+                                                <option value="light">Claro</option>
+                                                <option value="dark">Escuro</option>
+                                                <option value="auto">Automático</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Backup e Restauração -->
+                            <div class="col-lg-6">
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <h6 class="m-0 font-weight-bold">Backup e Restauração</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <button class="btn btn-outline-success w-100 mb-2" id="export-all-btn">
+                                                <i class="bi bi-download"></i> Exportar Todos os Dados
+                                            </button>
+                                            <button class="btn btn-outline-warning w-100 mb-2" id="import-file-btn">
+                                                <i class="bi bi-upload"></i> Importar de Arquivo
+                                            </button>
+                                            <input type="file" id="import-file-input" class="d-none" accept=".json">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Configuração do GitHub -->
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="m-0 font-weight-bold">Integração com GitHub</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label class="form-label">Nome de Usuário</label>
+                                            <input type="text" class="form-control" id="github-username" placeholder="seu-usuario">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Repositório</label>
+                                            <input type="text" class="form-control" id="github-repo" placeholder="english-planner-data">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Token de Acesso (opcional)</label>
+                                            <input type="password" class="form-control" id="github-token" placeholder="ghp_...">
+                                            <small class="form-text text-muted">Crie um token em GitHub → Settings → Developer settings</small>
+                                        </div>
+                                        <div class="d-grid gap-2">
+                                            <button class="btn btn-success" id="github-save-btn">
+                                                <i class="bi bi-github"></i> Salvar no GitHub
+                                            </button>
+                                            <button class="btn btn-outline-success" id="github-load-btn">
+                                                <i class="bi bi-download"></i> Carregar do GitHub
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
                 </div>
-            </div>
-        </section>
+                
+                <!-- Footer -->
+                <footer class="pt-3 mt-4 text-muted border-top">
+                    <div class="container-fluid">
+                        <div class="row">
+                            <div class="col-md-6">
+                                English Planner Pro v1.0.0
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <span id="last-save">Último salvamento: Nunca</span>
+                            </div>
+                        </div>
+                    </div>
+                </footer>
+            </main>
+        </div>
     </div>
 
-    <!-- Modals -->
-    <!-- Add/Edit Class Modal -->
-    <div class="modal fade" id="addClassModal" tabindex="-1">
+    <!-- MODAIS -->
+
+    <!-- Modal Adicionar/Editar Turma -->
+    <div class="modal fade" id="classModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
@@ -538,54 +669,48 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <input type="hidden" id="editClassId" value="">
-                    <div class="mb-3">
-                        <label class="form-label">Nome da Turma</label>
-                        <input type="text" class="form-control" id="className" placeholder="Ex: INT W (Seg-Qua) 16h">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Dias da Semana</label>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" value="segunda" id="daySegunda">
-                            <label class="form-check-label" for="daySegunda">Segunda-feira</label>
+                    <form id="classForm">
+                        <input type="hidden" id="classId">
+                        <div class="mb-3">
+                            <label for="className" class="form-label">Nome da Turma *</label>
+                            <input type="text" class="form-control" id="className" required>
                         </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" value="terca" id="dayTerca">
-                            <label class="form-check-label" for="dayTerca">Terça-feira</label>
+                        <div class="mb-3">
+                            <label class="form-label">Dias da Semana *</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="segunda" id="dayMonday">
+                                <label class="form-check-label" for="dayMonday">Segunda-feira</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="terca" id="dayTuesday">
+                                <label class="form-check-label" for="dayTuesday">Terça-feira</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="quarta" id="dayWednesday">
+                                <label class="form-check-label" for="dayWednesday">Quarta-feira</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="quinta" id="dayThursday">
+                                <label class="form-check-label" for="dayThursday">Quinta-feira</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="sexta" id="dayFriday">
+                                <label class="form-check-label" for="dayFriday">Sexta-feira</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="sabado" id="daySaturday">
+                                <label class="form-check-label" for="daySaturday">Sábado</label>
+                            </div>
                         </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" value="quarta" id="dayQuarta">
-                            <label class="form-check-label" for="dayQuarta">Quarta-feira</label>
+                        <div class="mb-3">
+                            <label for="classTime" class="form-label">Horário *</label>
+                            <input type="time" class="form-control" id="classTime" required>
                         </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" value="quinta" id="dayQuinta">
-                            <label class="form-check-label" for="dayQuinta">Quinta-feira</label>
+                        <div class="mb-3">
+                            <label for="classColor" class="form-label">Cor da Turma</label>
+                            <input type="color" class="form-control form-control-color" id="classColor" value="#4361ee">
                         </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" value="sexta" id="daySexta">
-                            <label class="form-check-label" for="daySexta">Sexta-feira</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" value="sabado" id="daySabado">
-                            <label class="form-check-label" for="daySabado">Sábado</label>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Horário</label>
-                        <input type="time" class="form-control" id="classTime" value="16:00">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Cor da Turma</label>
-                        <div>
-                            <span class="color-picker" style="background:#3498db;" data-color="#3498db"></span>
-                            <span class="color-picker" style="background:#e74c3c;" data-color="#e74c3c"></span>
-                            <span class="color-picker" style="background:#2ecc71;" data-color="#2ecc71"></span>
-                            <span class="color-picker" style="background:#f39c12;" data-color="#f39c12"></span>
-                            <span class="color-picker" style="background:#9b59b6;" data-color="#9b59b6"></span>
-                            <span class="color-picker" style="background:#1abc9c;" data-color="#1abc9c"></span>
-                        </div>
-                        <input type="hidden" id="classColor" value="#3498db">
-                    </div>
+                    </form>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -595,8 +720,8 @@
         </div>
     </div>
 
-    <!-- Add/Edit Student Modal -->
-    <div class="modal fade" id="addStudentModal" tabindex="-1">
+    <!-- Modal Adicionar/Editar Aluno -->
+    <div class="modal fade" id="studentModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
@@ -604,75 +729,122 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <input type="hidden" id="editStudentId" value="">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Nome do Aluno</label>
-                            <input type="text" class="form-control" id="studentName">
+                    <form id="studentForm">
+                        <input type="hidden" id="studentId">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="studentName" class="form-label">Nome do Aluno *</label>
+                                <input type="text" class="form-control" id="studentName" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="studentClass" class="form-label">Turma *</label>
+                                <select class="form-select" id="studentClass" required>
+                                    <option value="">Selecione uma turma</option>
+                                </select>
+                            </div>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Turma</label>
-                            <select class="form-control" id="studentClass">
-                                <option value="">Selecione uma turma</option>
-                            </select>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="lastLesson" class="form-label">Última Lição</label>
+                                <input type="text" class="form-control" id="lastLesson" placeholder="Ex: 169 ou RW1">
+                                <small class="form-text text-muted">Número da lição ou revisão (RW)</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="nextLesson" class="form-label">Próxima Lição</label>
+                                <input type="text" class="form-control" id="nextLesson" placeholder="Ex: 170 ou RW2">
+                            </div>
                         </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Última Lição Feita</label>
-                            <input type="text" class="form-control" id="lastLesson" placeholder="Ex: 169, RW1, RW2">
+                        
+                        <hr>
+                        <h6>Avaliação F.A.L.E</h6>
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <label for="faleF" class="form-label">Fluência</label>
+                                <select class="form-select" id="faleF">
+                                    <option value="">Selecione</option>
+                                    <option value="O">Ótimo</option>
+                                    <option value="MB">Muito Bom</option>
+                                    <option value="B">Bom</option>
+                                    <option value="R">Regular</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label for="faleA" class="form-label">Pronúncia</label>
+                                <select class="form-select" id="faleA">
+                                    <option value="">Selecione</option>
+                                    <option value="O">Ótimo</option>
+                                    <option value="MB">Muito Bom</option>
+                                    <option value="B">Bom</option>
+                                    <option value="R">Regular</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label for="faleL" class="form-label">Compreensão</label>
+                                <select class="form-select" id="faleL">
+                                    <option value="">Selecione</option>
+                                    <option value="O">Ótimo</option>
+                                    <option value="MB">Muito Bom</option>
+                                    <option value="B">Bom</option>
+                                    <option value="R">Regular</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label for="faleE" class="form-label">Expressão</label>
+                                <select class="form-select" id="faleE">
+                                    <option value="">Selecione</option>
+                                    <option value="O">Ótimo</option>
+                                    <option value="MB">Muito Bom</option>
+                                    <option value="B">Bom</option>
+                                    <option value="R">Regular</option>
+                                </select>
+                            </div>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Próxima Lição</label>
-                            <input type="text" class="form-control" id="nextLesson" placeholder="Ex: 170, RW1, RW2">
+                        
+                        <hr>
+                        <h6>Informações Adicionais</h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Dever de Casa</label>
+                                <div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="homework" id="homeworkYes" value="sim">
+                                        <label class="form-check-label" for="homeworkYes">Feito</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="homework" id="homeworkNo" value="nao">
+                                        <label class="form-check-label" for="homeworkNo">Não Feito</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="homework" id="homeworkPartial" value="parcial">
+                                        <label class="form-check-label" for="homeworkPartial">Parcial</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Preparação da Aula</label>
+                                <div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="preparation" id="preparationYes" value="sim">
+                                        <label class="form-check-label" for="preparationYes">Feita</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="preparation" id="preparationNo" value="nao">
+                                        <label class="form-check-label" for="preparationNo">Não Feita</label>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <h6 class="mt-4 mb-3">Avaliações F.A.L.E</h6>
-                    <div class="row">
-                        <div class="col-md-3 mb-3">
-                            <label class="form-label">Fluência (F)</label>
-                            <select class="form-control" id="scoreF">
-                                <option value="O">Ótimo (O)</option>
-                                <option value="MB">Muito Bom (MB)</option>
-                                <option value="B" selected>Bom (B)</option>
-                                <option value="R">Regular (R)</option>
-                            </select>
+                        
+                        <div class="mb-3">
+                            <label for="studentEvaluation" class="form-label">Avaliação do Aluno</label>
+                            <textarea class="form-control" id="studentEvaluation" rows="3" placeholder="Breve comentário sobre o aluno..."></textarea>
                         </div>
-                        <div class="col-md-3 mb-3">
-                            <label class="form-label">Pronúncia (A)</label>
-                            <select class="form-control" id="scoreA">
-                                <option value="O">Ótimo (O)</option>
-                                <option value="MB">Muito Bom (MB)</option>
-                                <option value="B" selected>Bom (B)</option>
-                                <option value="R">Regular (R)</option>
-                            </select>
+                        
+                        <div class="mb-3">
+                            <label for="classObservation" class="form-label">Observação da Aula</label>
+                            <textarea class="form-control" id="classObservation" rows="3" placeholder="Observações sobre a aula..."></textarea>
                         </div>
-                        <div class="col-md-3 mb-3">
-                            <label class="form-label">Compreensão (L)</label>
-                            <select class="form-control" id="scoreL">
-                                <option value="O">Ótimo (O)</option>
-                                <option value="MB">Muito Bom (MB)</option>
-                                <option value="B" selected>Bom (B)</option>
-                                <option value="R">Regular (R)</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <label class="form-label">Expressão (E)</label>
-                            <select class="form-control" id="scoreE">
-                                <option value="O">Ótimo (O)</option>
-                                <option value="MB">Muito Bom (MB)</option>
-                                <option value="B" selected>Bom (B)</option>
-                                <option value="R">Regular (R)</option>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <div class="alert alert-info mt-3">
-                        <i class="bi bi-info-circle me-2"></i>
-                        Média calculada automaticamente: 
-                        <strong id="calculatedAverage">Bom (2.0)</strong>
-                    </div>
+                    </form>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -682,43 +854,79 @@
         </div>
     </div>
 
-    <!-- Class Details Modal -->
-    <div class="modal fade" id="classDetailsModal" tabindex="-1">
+    <!-- Modal Detalhes da Turma -->
+    <div class="modal fade" id="classDetailModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="classDetailsTitle">Detalhes da Turma</h5>
+                    <h5 class="modal-title">Detalhes da Turma</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h6 id="classDetailsName"></h6>
-                        <div id="classActions"></div>
+                    <div id="classDetailContent">
+                        <!-- Conteúdo será gerado por JavaScript -->
                     </div>
-                    <div id="classStudentsList"></div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Attendance Modal (será injetado dinamicamente) -->
-    <!-- O modal de presenças será criado dinamicamente pelo JavaScript -->
-
-    <!-- Loading Overlay -->
-    <div class="loading-overlay d-none" id="loadingOverlay">
-        <div class="text-center">
-            <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;"></div>
-            <h5>Processando...</h5>
+    <!-- Modal Registro de Frequência -->
+    <div class="modal fade" id="attendanceModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Registro de Frequência</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="modalClassSelect" class="form-label">Turma</label>
+                            <select class="form-select" id="modalClassSelect">
+                                <option value="">Selecione uma turma</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="modalDate" class="form-label">Data</label>
+                            <input type="date" class="form-control" id="modalDate" value="">
+                        </div>
+                    </div>
+                    
+                    <div id="attendanceModalContent">
+                        <p class="text-muted">Selecione uma turma para ver os alunos.</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="saveAttendanceBtn">Salvar Frequência</button>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Bootstrap & jQuery -->
+    <!-- Modal Confirmação -->
+    <div class="modal fade" id="confirmModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmar Ação</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="confirmMessage">Tem certeza que deseja realizar esta ação?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" id="confirmActionBtn">Confirmar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap Bundle com Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- Nosso JS (agora com type="module") -->
-    <script type="module" src="js/app.js"></script>
+    <!-- Nosso JavaScript -->
+    <script src="app.js"></script>
 </body>
 </html>
