@@ -804,66 +804,6 @@ function suggestPeerPairs(classId) {
     
     return pairs;
 }
-/**
- * Salva tabela de frequência
- */
-function saveAttendanceTable() {
-    const classId = document.getElementById('attendance-class-select').value;
-    const date = document.getElementById('attendance-date').value;
-    
-    if (!classId || !date) {
-        showNotification('Selecione uma turma e data!', 'warning');
-        return;
-    }
-    
-    const attendanceData = [];
-    const rows = document.querySelectorAll('#attendance-table-container tbody tr');
-    
-    rows.forEach(row => {
-        const studentId = parseInt(row.querySelector('.attendance-status').getAttribute('data-student-id'));
-        const status = row.querySelector('.attendance-status').value;
-        const homework = row.querySelector('.homework-status').value;
-        const preparation = row.querySelector('.preparation-status').value;
-        const evaluation = row.querySelector('.evaluation-text').value.trim();
-        const observation = row.querySelector('.observation-text').value.trim();
-        
-        attendanceData.push({
-            studentId,
-            status,
-            homework,
-            preparation,
-            evaluation,
-            observation
-        });
-    });
-    
-    registerAttendance(parseInt(classId), date, attendanceData);
-    showNotification('Frequência salva com sucesso!', 'success');
-}
-
-/**
- * Confirma par de peer work
- */
-function confirmPeerPair(pair) {
-    const date = document.getElementById('planning-date').value;
-    const classId = document.getElementById('planning-class-select').value;
-    
-    if (!date || !classId) {
-        showNotification('Selecione uma data e turma!', 'warning');
-        return;
-    }
-    
-    const pairData = [{
-        student1Id: pair.student1.id,
-        student1Name: pair.student1.name,
-        student2Id: pair.student2.id,
-        student2Name: pair.student2.name,
-        lesson: `${pair.student1.nextLesson} ↔ ${pair.student2.nextLesson}`
-    }];
-    
-    registerPeerWork(parseInt(classId), date, pairData);
-    showNotification('Par confirmado e salvo no histórico!', 'success');
-}
 
 /**
  * Registra peer work realizado
@@ -1251,12 +1191,95 @@ function setupEventListeners() {
     document.getElementById('darkModeSwitch')?.addEventListener('change', toggleDarkMode);
     document.getElementById('theme-select')?.addEventListener('change', changeTheme);
     
-    // Filtros
-    document.getElementById('class-search')?.addEventListener('input', filterClasses);
-    document.getElementById('student-search')?.addEventListener('input', filterStudents);
-    document.getElementById('student-class-filter')?.addEventListener('change', filterStudents);
-    document.getElementById('attendance-class-select')?.addEventListener('change', loadAttendanceTable);
-    document.getElementById('planning-class-select')?.addEventListener('change', loadPlanningSection);
+    // Filtros de turmas
+    const classSearch = document.getElementById('class-search');
+    const classDayFilter = document.getElementById('class-day-filter');
+    
+    if (classSearch) {
+        classSearch.addEventListener('input', filterClasses);
+    }
+    
+    if (classDayFilter) {
+        classDayFilter.addEventListener('change', filterClasses);
+    }
+    
+    // Filtros de alunos
+    const studentSearch = document.getElementById('student-search');
+    const studentClassFilter = document.getElementById('student-class-filter');
+    const studentFaleFilter = document.getElementById('student-fale-filter');
+    
+    if (studentSearch) {
+        studentSearch.addEventListener('input', filterStudents);
+    }
+    
+    if (studentClassFilter) {
+        studentClassFilter.addEventListener('change', filterStudents);
+    }
+    
+    if (studentFaleFilter) {
+        studentFaleFilter.addEventListener('change', filterStudents);
+    }
+    
+    // Planejamento
+    const planningClassSelect = document.getElementById('planning-class-select');
+    const planningDate = document.getElementById('planning-date');
+    const generateOrderBtn = document.getElementById('generate-order-btn');
+    const suggestPairsBtn = document.getElementById('suggest-pairs-btn');
+    
+    if (planningClassSelect) {
+        planningClassSelect.addEventListener('change', loadPlanningSection);
+    }
+    
+    if (planningDate) {
+        planningDate.addEventListener('change', loadPlanningSection);
+    }
+    
+    if (generateOrderBtn) {
+        generateOrderBtn.addEventListener('click', generateAndShowOrder);
+    }
+    
+    if (suggestPairsBtn) {
+        suggestPairsBtn.addEventListener('click', generateAndShowPairs);
+    }
+    
+    // Frequência
+    const attendanceClassSelect = document.getElementById('attendance-class-select');
+    const attendanceDate = document.getElementById('attendance-date');
+    const loadAttendanceBtn = document.getElementById('load-attendance-btn');
+    
+    if (attendanceClassSelect) {
+        attendanceClassSelect.addEventListener('change', loadAttendanceTable);
+    }
+    
+    if (attendanceDate) {
+        attendanceDate.addEventListener('change', loadAttendanceTable);
+    }
+    
+    if (loadAttendanceBtn) {
+        loadAttendanceBtn.addEventListener('click', loadAttendanceTable);
+    }
+    
+    // Relatórios
+    const reportClassSelect = document.getElementById('report-class-select');
+    const reportMonth = document.getElementById('report-month');
+    const reportType = document.getElementById('report-type');
+    const refreshReportsBtn = document.getElementById('refresh-reports-btn');
+    
+    if (reportClassSelect) {
+        reportClassSelect.addEventListener('change', loadReports);
+    }
+    
+    if (reportMonth) {
+        reportMonth.addEventListener('change', loadReports);
+    }
+    
+    if (reportType) {
+        reportType.addEventListener('change', loadReports);
+    }
+    
+    if (refreshReportsBtn) {
+        refreshReportsBtn.addEventListener('click', loadReports);
+    }
     
     // Fechar modais com ESC
     document.addEventListener('keydown', (e) => {
@@ -1437,6 +1460,13 @@ function updateClassesSection() {
     
     // Atualiza filtros
     updateClassFilters();
+    
+    // Configura data atual no filtro de data se existir
+    const today = new Date().toISOString().split('T')[0];
+    const dateFilter = document.getElementById('class-date-filter');
+    if (dateFilter) {
+        dateFilter.value = today;
+    }
 }
 
 /**
@@ -1461,9 +1491,15 @@ function updatePlanningSection() {
     // Atualiza seletor de turmas
     updatePlanningClassSelect();
     
+    // Define data atual se vazia
+    const planningDate = document.getElementById('planning-date');
+    if (planningDate && !planningDate.value) {
+        planningDate.value = new Date().toISOString().split('T')[0];
+    }
+    
     // Carrega dados se uma turma estiver selecionada
     const classSelect = document.getElementById('planning-class-select');
-    if (classSelect.value) {
+    if (classSelect && classSelect.value) {
         loadPlanningSection();
     }
 }
@@ -1477,9 +1513,15 @@ function updateAttendanceSection() {
     // Atualiza seletor de turmas
     updateAttendanceClassSelect();
     
+    // Define data atual se vazia
+    const attendanceDate = document.getElementById('attendance-date');
+    if (attendanceDate && !attendanceDate.value) {
+        attendanceDate.value = new Date().toISOString().split('T')[0];
+    }
+    
     // Carrega dados se uma turma estiver selecionada
     const classSelect = document.getElementById('attendance-class-select');
-    if (classSelect.value) {
+    if (classSelect && classSelect.value) {
         loadAttendanceTable();
     }
 }
@@ -1492,6 +1534,13 @@ function updateReportsSection() {
     
     // Atualiza seletor de turmas
     updateReportClassSelect();
+    
+    // Define mês atual se vazia
+    const reportMonth = document.getElementById('report-month');
+    if (reportMonth && !reportMonth.value) {
+        const now = new Date();
+        reportMonth.value = now.toISOString().slice(0, 7);
+    }
     
     // Carrega relatórios
     loadReports();
@@ -1542,8 +1591,8 @@ function renderClassesList() {
         ).join('');
         
         return `
-            <div class="col-lg-6 col-xl-4">
-                <div class="card class-card" data-class-id="${cls.id}">
+            <div class="col-lg-6 col-xl-6">
+                <div class="card class-card" data-class-id="${cls.id}" style="min-height: 350px;">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start mb-3">
                             <div class="d-flex align-items-center">
@@ -1638,20 +1687,6 @@ function addClassCardEventListeners() {
 }
 
 /**
- * Exclui turma com confirmação
- */
-function deleteClassWithConfirmation(classId) {
-    const cls = getClassById(classId);
-    if (!cls) return;
-    
-    if (confirm(`Tem certeza que deseja excluir a turma "${cls.name}"?\n\nEsta ação também excluirá todos os alunos desta turma e não pode ser desfeita.`)) {
-        deleteClass(classId);
-        showNotification(`Turma "${cls.name}" excluída com sucesso!`, 'success');
-        updateUI();
-    }
-}
-
-/**
  * Renderiza tabela de alunos
  */
 function renderStudentsTable() {
@@ -1734,6 +1769,1213 @@ function renderStudentsTable() {
 }
 
 /* ============================================
+   FUNÇÕES DE FILTRO COMPLETAS
+   ============================================ */
+
+/**
+ * Atualiza filtros de turmas
+ */
+function updateClassFilters() {
+    const dayFilter = document.getElementById('class-day-filter');
+    if (dayFilter) {
+        // Já está preenchido no HTML
+        dayFilter.innerHTML = `
+            <option value="">Filtrar por dia</option>
+            <option value="segunda">Segunda-feira</option>
+            <option value="terca">Terça-feira</option>
+            <option value="quarta">Quarta-feira</option>
+            <option value="quinta">Quinta-feira</option>
+            <option value="sexta">Sexta-feira</option>
+            <option value="sabado">Sábado</option>
+        `;
+    }
+}
+
+/**
+ * Atualiza filtros de alunos
+ */
+function updateStudentFilters() {
+    const classFilter = document.getElementById('student-class-filter');
+    const faleFilter = document.getElementById('student-fale-filter');
+    
+    if (classFilter) {
+        // Limpa opções existentes (exceto a primeira)
+        while (classFilter.options.length > 1) {
+            classFilter.remove(1);
+        }
+        
+        // Adiciona todas as turmas
+        getClasses().forEach(cls => {
+            const option = document.createElement('option');
+            option.value = cls.id;
+            option.textContent = cls.name;
+            classFilter.appendChild(option);
+        });
+    }
+    
+    if (faleFilter) {
+        // Já está preenchido no HTML
+        faleFilter.innerHTML = `
+            <option value="">Filtrar por F.A.L.E</option>
+            <option value="O">Ótimo</option>
+            <option value="MB">Muito Bom</option>
+            <option value="B">Bom</option>
+            <option value="R">Regular</option>
+        `;
+    }
+}
+
+/**
+ * Filtra lista de turmas
+ */
+function filterClasses() {
+    const searchTerm = document.getElementById('class-search').value.toLowerCase();
+    const dayFilter = document.getElementById('class-day-filter').value;
+    
+    const container = document.getElementById('classes-list');
+    const classes = getClasses();
+    
+    if (classes.length === 0) return;
+    
+    // Filtra as turmas
+    const filteredClasses = classes.filter(cls => {
+        const matchesSearch = cls.name.toLowerCase().includes(searchTerm);
+        const matchesDay = !dayFilter || cls.days.includes(dayFilter);
+        return matchesSearch && matchesDay;
+    });
+    
+    // Se não houver turmas após o filtro, mostra mensagem
+    if (filteredClasses.length === 0) {
+        container.innerHTML = `
+            <div class="col-12">
+                <div class="empty-state">
+                    <i class="bi bi-search"></i>
+                    <h5>Nenhuma turma encontrada</h5>
+                    <p>Tente outros termos de busca ou remova os filtros.</p>
+                </div>
+            </div>
+        `;
+        return;
+    }
+    
+    // Gera o HTML para as turmas filtradas
+    container.innerHTML = filteredClasses.map(cls => {
+        const students = getStudentsByClass(cls.id);
+        const stats = getClassStats(cls.id);
+        
+        const daysDisplay = cls.days.map(day => 
+            `<span class="day-badge">${WEEK_DAYS[day]?.substring(0, 3)}</span>`
+        ).join('');
+        
+        return `
+            <div class="col-lg-6 col-xl-6">
+                <div class="card class-card" data-class-id="${cls.id}" style="min-height: 350px;">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="d-flex align-items-center">
+                                <span class="class-color-badge" style="background-color: ${cls.color}"></span>
+                                <h5 class="card-title mb-0">${cls.name}</h5>
+                            </div>
+                            <span class="badge bg-primary">${students.length} aluno${students.length !== 1 ? 's' : ''}</span>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <p class="text-muted mb-2">
+                                <i class="bi bi-calendar-week"></i>
+                                ${cls.days.map(day => WEEK_DAYS[day]).join(', ')} às ${cls.time}
+                            </p>
+                            <div class="days-display">
+                                ${daysDisplay}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <small class="text-muted d-block mb-2">Progresso da turma</small>
+                            <div class="progress">
+                                <div class="progress-bar" 
+                                     style="width: ${stats.attendanceRate}%"
+                                     title="Frequência: ${stats.attendanceRate.toFixed(0)}%">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="stats-display">
+                            <div class="stat-item">
+                                <span class="stat-value">${stats.averageFale.toFixed(1)}</span>
+                                <span class="stat-label">Média F.A.L.E</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value">${Math.round(stats.attendanceRate)}%</span>
+                                <span class="stat-label">Frequência</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value">${students.length}</span>
+                                <span class="stat-label">Alunos</span>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3 d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-primary view-class-btn" data-id="${cls.id}">
+                                <i class="bi bi-eye"></i> Detalhes
+                            </button>
+                            <button class="btn btn-sm btn-outline-warning edit-class-btn" data-id="${cls.id}">
+                                <i class="bi bi-pencil"></i> Editar
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger delete-class-btn" data-id="${cls.id}">
+                                <i class="bi bi-trash"></i> Excluir
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    // Reatribui os event listeners
+    addClassCardEventListeners();
+}
+
+/**
+ * Filtra tabela de alunos
+ */
+function filterStudents() {
+    const searchTerm = document.getElementById('student-search').value.toLowerCase();
+    const classFilter = document.getElementById('student-class-filter').value;
+    const faleFilter = document.getElementById('student-fale-filter').value;
+    
+    const tbody = document.getElementById('students-table-body');
+    const students = getStudents();
+    
+    // Filtra os alunos
+    const filteredStudents = students.filter(student => {
+        const matchesSearch = student.name.toLowerCase().includes(searchTerm);
+        const matchesClass = !classFilter || student.classId.toString() === classFilter;
+        
+        // Filtro por F.A.L.E
+        let matchesFale = true;
+        if (faleFilter && student.fale) {
+            // Verifica se algum dos valores F.A.L.E corresponde ao filtro
+            const faleValues = Object.values(student.fale);
+            matchesFale = faleValues.includes(faleFilter);
+        }
+        
+        return matchesSearch && matchesClass && matchesFale;
+    });
+    
+    // Se não houver alunos, mostra mensagem
+    if (filteredStudents.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center">
+                    <div class="empty-state py-4">
+                        <i class="bi bi-search"></i>
+                        <h5>Nenhum aluno encontrado</h5>
+                        <p>Tente outros termos de busca ou remova os filtros.</p>
+                    </div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    // Gera as linhas da tabela
+    tbody.innerHTML = filteredStudents.map(student => {
+        const cls = getClassById(student.classId);
+        const fale = student.fale || {};
+        
+        const faleBadges = ['F', 'A', 'L', 'E'].map(letter => {
+            const value = fale[letter];
+            return value ? `<span class="fale-badge ${FALE_CLASSES[value]}" title="${letter}: ${value}">${letter}</span>` : '';
+        }).join(' ');
+        
+        return `
+            <tr>
+                <td>
+                    <strong>${student.name}</strong>
+                    ${student.homework === 'sim' ? '<span class="badge bg-success ms-2" title="Dever feito">✓</span>' : ''}
+                    ${student.preparation === 'sim' ? '<span class="badge bg-info ms-1" title="Preparação feita">📚</span>' : ''}
+                </td>
+                <td>${cls ? cls.name : 'Sem turma'}</td>
+                <td><span class="lesson-badge ${getLessonType(student.lastLessonValue)}">${student.lastLesson}</span></td>
+                <td><span class="lesson-badge ${getLessonType(student.nextLessonValue)}">${student.nextLesson}</span></td>
+                <td>${faleBadges}</td>
+                <td>
+                    <span class="badge ${student.average >= 3.5 ? 'bg-success' : student.average >= 2.5 ? 'bg-warning' : 'bg-secondary'}">
+                        ${student.average ? student.average.toFixed(1) : '0.0'}
+                    </span>
+                </td>
+                <td>
+                    <div class="student-actions">
+                        <button class="btn btn-sm btn-outline-primary edit-student-btn" data-id="${student.id}">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger delete-student-btn" data-id="${student.id}">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    // Reatribui os event listeners
+    tbody.querySelectorAll('.edit-student-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const studentId = parseInt(e.target.closest('button').getAttribute('data-id'));
+            showStudentModal(studentId);
+        });
+    });
+    
+    tbody.querySelectorAll('.delete-student-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const studentId = parseInt(e.target.closest('button').getAttribute('data-id'));
+            deleteStudentWithConfirmation(studentId);
+        });
+    });
+}
+
+/**
+ * Preenche seletor de turmas
+ */
+function populateClassSelect(selectId, includeAllOption = true) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+    
+    // Salva valor atual
+    const currentValue = select.value;
+    
+    // Limpa opções
+    select.innerHTML = '';
+    
+    // Adiciona opção "todas as turmas" se solicitado
+    if (includeAllOption) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'Todas as turmas';
+        select.appendChild(option);
+    } else {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'Selecione uma turma';
+        select.appendChild(option);
+    }
+    
+    // Adiciona turmas
+    getClasses().forEach(cls => {
+        const option = document.createElement('option');
+        option.value = cls.id;
+        option.textContent = cls.name;
+        select.appendChild(option);
+    });
+    
+    // Restaura valor anterior se ainda existir
+    if (currentValue && select.querySelector(`option[value="${currentValue}"]`)) {
+        select.value = currentValue;
+    }
+}
+
+/**
+ * Atualiza seletor de turmas no planejamento
+ */
+function updatePlanningClassSelect() {
+    populateClassSelect('planning-class-select', false);
+}
+
+/**
+ * Atualiza seletor de turmas na frequência
+ */
+function updateAttendanceClassSelect() {
+    populateClassSelect('attendance-class-select', false);
+}
+
+/**
+ * Atualiza seletor de turmas nos relatórios
+ */
+function updateReportClassSelect() {
+    populateClassSelect('report-class-select', true);
+}
+
+/**
+ * Carrega seção de planejamento
+ */
+function loadPlanningSection() {
+    const classId = document.getElementById('planning-class-select').value;
+    const date = document.getElementById('planning-date').value || new Date().toISOString().split('T')[0];
+    
+    if (!classId) {
+        document.getElementById('attendance-order-list').innerHTML = 
+            '<p class="text-muted">Selecione uma turma para gerar a ordem de atendimento.</p>';
+        document.getElementById('peer-suggestions').innerHTML = 
+            '<p class="text-muted">Selecione uma turma para gerar sugestões de pares.</p>';
+        return;
+    }
+    
+    const students = getStudentsByClass(parseInt(classId));
+    
+    if (students.length === 0) {
+        document.getElementById('attendance-order-list').innerHTML = 
+            '<p class="text-muted">Não há alunos nesta turma.</p>';
+        document.getElementById('peer-suggestions').innerHTML = 
+            '<p class="text-muted">Não há alunos para sugerir pares.</p>';
+        return;
+    }
+    
+    // Gera ordem de atendimento
+    const order = generateAttendanceOrder(parseInt(classId));
+    renderAttendanceOrder(order);
+    
+    // Gera sugestões de pares
+    const pairs = suggestPeerPairs(parseInt(classId));
+    renderPeerSuggestions(pairs);
+}
+
+/**
+ * Renderiza ordem de atendimento
+ */
+function renderAttendanceOrder(order) {
+    const container = document.getElementById('attendance-order-list');
+    
+    if (order.length === 0) {
+        container.innerHTML = '<p class="text-muted">Nenhum aluno na turma.</p>';
+        return;
+    }
+    
+    const html = order.map(item => `
+        <div class="d-flex align-items-center mb-3 p-3 border rounded bg-light">
+            <div class="me-3">
+                <span class="badge bg-primary fs-6">${item.order}</span>
+            </div>
+            <div class="flex-grow-1">
+                <h6 class="mb-1">${item.studentName}</h6>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="lesson-badge ${item.lessonType}">${item.nextLesson}</span>
+                    <small class="text-muted">Média: ${item.faleAverage.toFixed(1)}</small>
+                </div>
+            </div>
+        </div>
+    `).join('');
+    
+    container.innerHTML = html;
+}
+
+/**
+ * Renderiza sugestões de pares
+ */
+function renderPeerSuggestions(pairs) {
+    const container = document.getElementById('peer-suggestions');
+    
+    if (pairs.length === 0) {
+        container.innerHTML = '<p class="text-muted">Não há sugestões de pares disponíveis.</p>';
+        return;
+    }
+    
+    const html = pairs.map((pair, index) => `
+        <div class="pair-suggestion mb-3 p-3 border rounded bg-light">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="badge bg-success">Par ${index + 1}</span>
+                <small class="text-muted">Diferença: ${pair.difference} lições</small>
+            </div>
+            
+            <div class="row">
+                <div class="col-5">
+                    <div class="d-flex align-items-center">
+                        <div class="me-2">
+                            <i class="bi bi-person-circle fs-4"></i>
+                        </div>
+                        <div>
+                            <strong>${pair.student1.name}</strong>
+                            <div class="lesson-badge ${getLessonType(pair.student1.nextLessonValue)}">
+                                ${pair.student1.nextLesson}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-2 text-center">
+                    <i class="bi bi-arrow-left-right fs-4 text-muted"></i>
+                </div>
+                
+                <div class="col-5">
+                    <div class="d-flex align-items-center">
+                        <div class="me-2">
+                            <i class="bi bi-person-circle fs-4"></i>
+                        </div>
+                        <div>
+                            <strong>${pair.student2.name}</strong>
+                            <div class="lesson-badge ${getLessonType(pair.student2.nextLessonValue)}">
+                                ${pair.student2.nextLesson}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-3 text-center">
+                <button class="btn btn-sm btn-outline-success confirm-pair-btn" 
+                        data-pair-index="${index}">
+                    <i class="bi bi-check-circle"></i> Confirmar Par
+                </button>
+            </div>
+        </div>
+    `).join('');
+    
+    container.innerHTML = html;
+    
+    // Adiciona event listeners aos botões de confirmar
+    container.querySelectorAll('.confirm-pair-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const pairIndex = parseInt(e.target.closest('button').getAttribute('data-pair-index'));
+            confirmPeerPair(pairs[pairIndex]);
+        });
+    });
+}
+
+/**
+ * Gera e mostra ordem de atendimento
+ */
+function generateAndShowOrder() {
+    const classId = document.getElementById('planning-class-select').value;
+    if (classId) {
+        loadPlanningSection();
+        showNotification('Ordem de atendimento gerada!', 'success');
+    } else {
+        showNotification('Selecione uma turma primeiro!', 'warning');
+    }
+}
+
+/**
+ * Gera e mostra sugestões de pares
+ */
+function generateAndShowPairs() {
+    const classId = document.getElementById('planning-class-select').value;
+    if (classId) {
+        loadPlanningSection();
+        showNotification('Sugestões de pares geradas!', 'success');
+    } else {
+        showNotification('Selecione uma turma primeiro!', 'warning');
+    }
+}
+
+/**
+ * Carrega tabela de frequência
+ */
+function loadAttendanceTable() {
+    const classId = document.getElementById('attendance-class-select').value;
+    const date = document.getElementById('attendance-date').value || 
+                 new Date().toISOString().split('T')[0];
+    
+    if (!classId) {
+        document.getElementById('attendance-table-container').innerHTML = 
+            '<p class="text-muted">Selecione uma turma para ver a frequência.</p>';
+        return;
+    }
+    
+    const students = getStudentsByClass(parseInt(classId));
+    
+    if (students.length === 0) {
+        document.getElementById('attendance-table-container').innerHTML = 
+            '<p class="text-muted">Não há alunos nesta turma.</p>';
+        return;
+    }
+    
+    // Obtém presenças
+    const attendance = getAttendanceByClassAndDate(parseInt(classId), date);
+    
+    // Renderiza tabela
+    renderAttendanceTable(attendance);
+}
+
+/**
+ * Renderiza tabela de frequência
+ */
+function renderAttendanceTable(attendance) {
+    const container = document.getElementById('attendance-table-container');
+    
+    const html = `
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Aluno</th>
+                        <th>Status</th>
+                        <th>Dever de Casa</th>
+                        <th>Preparação</th>
+                        <th>Avaliação</th>
+                        <th>Observação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${attendance.map(item => `
+                        <tr>
+                            <td>${item.studentName}</td>
+                            <td>
+                                <select class="form-select form-select-sm attendance-status" 
+                                        data-student-id="${item.studentId}">
+                                    <option value="present" ${item.status === 'present' ? 'selected' : ''}>
+                                        Presente
+                                    </option>
+                                    <option value="absent" ${item.status === 'absent' ? 'selected' : ''}>
+                                        Ausente
+                                    </option>
+                                    <option value="justified" ${item.status === 'justified' ? 'selected' : ''}>
+                                        Justificado
+                                    </option>
+                                </select>
+                            </td>
+                            <td>
+                                <select class="form-select form-select-sm homework-status" 
+                                        data-student-id="${item.studentId}">
+                                    <option value="sim" ${item.homework === 'sim' ? 'selected' : ''}>
+                                        Feito
+                                    </option>
+                                    <option value="nao" ${item.homework === 'nao' ? 'selected' : ''}>
+                                        Não Feito
+                                    </option>
+                                    <option value="parcial" ${item.homework === 'parcial' ? 'selected' : ''}>
+                                        Parcial
+                                    </option>
+                                </select>
+                            </td>
+                            <td>
+                                <select class="form-select form-select-sm preparation-status" 
+                                        data-student-id="${item.studentId}">
+                                    <option value="sim" ${item.preparation === 'sim' ? 'selected' : ''}>
+                                        Feita
+                                    </option>
+                                    <option value="nao" ${item.preparation === 'nao' ? 'selected' : ''}>
+                                        Não Feita
+                                    </option>
+                                </select>
+                            </td>
+                            <td>
+                                <textarea class="form-control form-control-sm evaluation-text" 
+                                          data-student-id="${item.studentId}"
+                                          rows="1">${item.evaluation || ''}</textarea>
+                            </td>
+                            <td>
+                                <textarea class="form-control form-control-sm observation-text" 
+                                          data-student-id="${item.studentId}"
+                                          rows="1">${item.observation || ''}</textarea>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="mt-3">
+            <button class="btn btn-primary" id="save-attendance-table-btn">
+                <i class="bi bi-save"></i> Salvar Alterações
+            </button>
+        </div>
+    `;
+    
+    container.innerHTML = html;
+    
+    // Adiciona event listener ao botão de salvar
+    document.getElementById('save-attendance-table-btn')?.addEventListener('click', saveAttendanceTable);
+}
+
+/**
+ * Carrega conteúdo do modal de frequência
+ */
+function loadAttendanceModalContent() {
+    const classId = document.getElementById('modalClassSelect').value;
+    const date = document.getElementById('modalDate').value;
+    
+    if (!classId) {
+        document.getElementById('attendanceModalContent').innerHTML = 
+            '<p class="text-muted">Selecione uma turma.</p>';
+        return;
+    }
+    
+    const attendance = getAttendanceByClassAndDate(parseInt(classId), date);
+    const cls = getClassById(parseInt(classId));
+    
+    let html = `
+        <h6>Registrar Frequência</h6>
+        <p class="text-muted">Turma: ${cls.name} - Data: ${date}</p>
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Aluno</th>
+                        <th>Status</th>
+                        <th>Dever</th>
+                        <th>Preparação</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    attendance.forEach(item => {
+        html += `
+            <tr>
+                <td>${item.studentName}</td>
+                <td>
+                    <select class="form-select form-select-sm modal-attendance-status" data-student-id="${item.studentId}">
+                        <option value="present" ${item.status === 'present' ? 'selected' : ''}>Presente</option>
+                        <option value="absent" ${item.status === 'absent' ? 'selected' : ''}>Ausente</option>
+                        <option value="justified" ${item.status === 'justified' ? 'selected' : ''}>Justificado</option>
+                    </select>
+                </td>
+                <td>
+                    <select class="form-select form-select-sm modal-homework-status" data-student-id="${item.studentId}">
+                        <option value="sim" ${item.homework === 'sim' ? 'selected' : ''}>Feito</option>
+                        <option value="nao" ${item.homework === 'nao' ? 'selected' : ''}>Não Feito</option>
+                        <option value="parcial" ${item.homework === 'parcial' ? 'selected' : ''}>Parcial</option>
+                    </select>
+                </td>
+                <td>
+                    <select class="form-select form-select-sm modal-preparation-status" data-student-id="${item.studentId}">
+                        <option value="sim" ${item.preparation === 'sim' ? 'selected' : ''}>Feita</option>
+                        <option value="nao" ${item.preparation === 'nao' ? 'selected' : ''}>Não Feita</option>
+                    </select>
+                </td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    document.getElementById('attendanceModalContent').innerHTML = html;
+}
+
+/**
+ * Salva tabela de frequência
+ */
+function saveAttendanceTable() {
+    const classId = document.getElementById('attendance-class-select').value;
+    const date = document.getElementById('attendance-date').value;
+    
+    if (!classId || !date) {
+        showNotification('Selecione uma turma e data!', 'warning');
+        return;
+    }
+    
+    const attendanceData = [];
+    const rows = document.querySelectorAll('#attendance-table-container tbody tr');
+    
+    rows.forEach(row => {
+        const studentId = parseInt(row.querySelector('.attendance-status').getAttribute('data-student-id'));
+        const status = row.querySelector('.attendance-status').value;
+        const homework = row.querySelector('.homework-status').value;
+        const preparation = row.querySelector('.preparation-status').value;
+        const evaluation = row.querySelector('.evaluation-text').value.trim();
+        const observation = row.querySelector('.observation-text').value.trim();
+        
+        attendanceData.push({
+            studentId,
+            status,
+            homework,
+            preparation,
+            evaluation,
+            observation
+        });
+    });
+    
+    registerAttendance(parseInt(classId), date, attendanceData);
+    showNotification('Frequência salva com sucesso!', 'success');
+}
+
+/**
+ * Salva frequência do modal
+ */
+function saveAttendance() {
+    const classId = document.getElementById('modalClassSelect').value;
+    const date = document.getElementById('modalDate').value;
+    
+    if (!classId || !date) {
+        showNotification('Selecione uma turma e data!', 'warning');
+        return;
+    }
+    
+    const attendanceData = [];
+    const rows = document.querySelectorAll('#attendanceModalContent tbody tr');
+    
+    rows.forEach(row => {
+        const studentId = parseInt(row.querySelector('.modal-attendance-status').getAttribute('data-student-id'));
+        const status = row.querySelector('.modal-attendance-status').value;
+        const homework = row.querySelector('.modal-homework-status').value;
+        const preparation = row.querySelector('.modal-preparation-status').value;
+        
+        attendanceData.push({
+            studentId,
+            status,
+            homework,
+            preparation,
+            evaluation: '',
+            observation: ''
+        });
+    });
+    
+    registerAttendance(parseInt(classId), date, attendanceData);
+    bootstrap.Modal.getInstance(document.getElementById('attendanceModal')).hide();
+    showNotification('Frequência salva com sucesso!', 'success');
+    updateUI();
+}
+
+/**
+ * Confirma par de peer work
+ */
+function confirmPeerPair(pair) {
+    const date = document.getElementById('planning-date').value;
+    const classId = document.getElementById('planning-class-select').value;
+    
+    if (!date || !classId) {
+        showNotification('Selecione uma data e turma!', 'warning');
+        return;
+    }
+    
+    const pairData = [{
+        student1Id: pair.student1.id,
+        student1Name: pair.student1.name,
+        student2Id: pair.student2.id,
+        student2Name: pair.student2.name,
+        lesson: `${pair.student1.nextLesson} ↔ ${pair.student2.nextLesson}`
+    }];
+    
+    registerPeerWork(parseInt(classId), date, pairData);
+    showNotification('Par confirmado e salvo no histórico!', 'success');
+}
+
+/**
+ * Exclui turma com confirmação
+ */
+function deleteClassWithConfirmation(classId) {
+    const cls = getClassById(classId);
+    if (!cls) return;
+    
+    if (confirm(`Tem certeza que deseja excluir a turma "${cls.name}"?\n\nEsta ação também excluirá todos os alunos desta turma e não pode ser desfeita.`)) {
+        deleteClass(classId);
+        showNotification(`Turma "${cls.name}" excluída com sucesso!`, 'success');
+        updateUI();
+    }
+}
+
+/**
+ * Exclui aluno com confirmação
+ */
+function deleteStudentWithConfirmation(studentId) {
+    const student = getStudentById(studentId);
+    if (!student) return;
+    
+    if (confirm(`Tem certeza que deseja excluir o aluno "${student.name}"?\n\nEsta ação não pode ser desfeita.`)) {
+        deleteStudent(studentId);
+        showNotification(`Aluno "${student.name}" excluído com sucesso!`, 'success');
+        updateUI();
+    }
+}
+
+/**
+ * Atualiza progresso das turmas no dashboard
+ */
+function updateClassesProgress() {
+    const container = document.getElementById('classes-progress');
+    const classes = getClasses();
+    
+    if (classes.length === 0) {
+        container.innerHTML = '<p class="text-muted">Nenhuma turma cadastrada.</p>';
+        return;
+    }
+    
+    const html = classes.map(cls => {
+        const stats = getClassStats(cls.id);
+        return `
+            <div class="mb-3">
+                <div class="d-flex justify-content-between">
+                    <span>${cls.name}</span>
+                    <span>${stats.averageFale.toFixed(1)}</span>
+                </div>
+                <div class="progress" style="height: 10px;">
+                    <div class="progress-bar" style="width: ${stats.averageFale * 25}%"></div>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    container.innerHTML = html;
+}
+
+/**
+ * Atualiza próximas aulas no dashboard
+ */
+function updateUpcomingClasses() {
+    const container = document.getElementById('upcoming-classes');
+    const today = new Date();
+    const dayName = Object.keys(WEEK_DAYS)[today.getDay() - 1]; // Ajuste para array brasileiro
+    
+    const todayClasses = getClasses().filter(cls => cls.days.includes(dayName));
+    
+    if (todayClasses.length === 0) {
+        container.innerHTML = '<p class="text-muted">Nenhuma aula agendada para hoje.</p>';
+        return;
+    }
+    
+    const html = todayClasses.map(cls => `
+        <div class="d-flex align-items-center mb-2">
+            <span class="class-color-badge me-2" style="background-color: ${cls.color}"></span>
+            <div>
+                <strong>${cls.name}</strong>
+                <div class="text-muted">${cls.time}</div>
+            </div>
+        </div>
+    `).join('');
+    
+    container.innerHTML = html;
+}
+
+/**
+ * Carrega configurações na interface
+ */
+function loadSettingsToUI() {
+    // Tema
+    document.getElementById('theme-select').value = AppState.settings.theme;
+    document.getElementById('darkModeSwitch').checked = AppState.settings.theme === 'dark';
+    
+    // Auto-save
+    document.getElementById('auto-save').checked = AppState.settings.autoSave;
+    
+    // Notificações
+    document.getElementById('notifications').checked = AppState.settings.notifications;
+    
+    // GitHub
+    document.getElementById('github-username').value = AppState.githubConfig.username || '';
+    document.getElementById('github-repo').value = AppState.githubConfig.repo || '';
+    document.getElementById('github-token').value = AppState.githubConfig.token || '';
+}
+
+/**
+ * Salva configurações da interface
+ */
+function saveSettingsFromUI() {
+    // Tema
+    AppState.settings.theme = document.getElementById('theme-select').value;
+    AppState.settings.autoSave = document.getElementById('auto-save').checked;
+    AppState.settings.notifications = document.getElementById('notifications').checked;
+    
+    // GitHub
+    AppState.githubConfig.username = document.getElementById('github-username').value.trim();
+    AppState.githubConfig.repo = document.getElementById('github-repo').value.trim();
+    AppState.githubConfig.token = document.getElementById('github-token').value.trim();
+    
+    saveSettings();
+    saveGitHubConfig();
+    initTheme(); // Aplica o tema
+    
+    showNotification('Configurações salvas com sucesso!', 'success');
+}
+
+/**
+ * Carrega relatórios
+ */
+function loadReports() {
+    const classId = document.getElementById('report-class-select').value || null;
+    const month = document.getElementById('report-month').value;
+    const reportType = document.getElementById('report-type').value;
+    
+    // Atualiza containers
+    updateProgressReport(classId);
+    updateFaleDistribution(classId);
+    updateDetailedReport(classId, reportType);
+}
+
+/**
+ * Atualiza relatório de progresso
+ */
+function updateProgressReport(classId = null) {
+    const container = document.getElementById('progress-report');
+    
+    const report = generateProgressReport(classId);
+    
+    const html = `
+        <div class="mb-3">
+            <h6 class="text-muted">Estatísticas Gerais</h6>
+            <div class="row">
+                <div class="col-6">
+                    <div class="text-center p-3 border rounded bg-light">
+                        <div class="fs-4 fw-bold">${report.averageFale.toFixed(1)}</div>
+                        <small class="text-muted">Média F.A.L.E</small>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="text-center p-3 border rounded bg-light">
+                        <div class="fs-4 fw-bold">${report.attendanceRate.toFixed(0)}%</div>
+                        <small class="text-muted">Frequência</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        ${report.classes.length > 0 ? `
+            <h6 class="text-muted mt-4">Progresso por Turma</h6>
+            ${report.classes.map(cls => `
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>${cls.className}</span>
+                        <span>${cls.averageFale.toFixed(1)}</span>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar" 
+                             style="width: ${cls.averageFale * 25}%" 
+                             title="Média: ${cls.averageFale.toFixed(1)}"></div>
+                    </div>
+                </div>
+            `).join('')}
+        ` : ''}
+    `;
+    
+    container.innerHTML = html;
+}
+
+/**
+ * Atualiza distribuição F.A.L.E
+ */
+function updateFaleDistribution(classId = null) {
+    const container = document.getElementById('fale-distribution');
+    
+    const report = generateFaleReport(classId);
+    const total = report.totalStudents;
+    
+    if (total === 0) {
+        container.innerHTML = '<p class="text-muted">Não há dados disponíveis.</p>';
+        return;
+    }
+    
+    const distribution = report.distribution;
+    
+    const html = `
+        <div class="mb-3">
+            <div class="row text-center">
+                <div class="col-3">
+                    <div class="p-2">
+                        <div class="fs-4 fw-bold text-success">${distribution.O || 0}</div>
+                        <small class="text-muted">Ótimo</small>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="p-2">
+                        <div class="fs-4 fw-bold text-primary">${distribution.MB || 0}</div>
+                        <small class="text-muted">Muito Bom</small>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="p-2">
+                        <div class="fs-4 fw-bold text-warning">${distribution.B || 0}</div>
+                        <small class="text-muted">Bom</small>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="p-2">
+                        <div class="fs-4 fw-bold text-danger">${distribution.R || 0}</div>
+                        <small class="text-muted">Regular</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-4">
+            <h6 class="text-muted mb-3">Médias por Competência</h6>
+            <div class="row">
+                <div class="col-3 text-center">
+                    <div class="p-2 border rounded">
+                        <div class="fw-bold">${report.averages.F.toFixed(1)}</div>
+                        <small class="text-muted">Fluência</small>
+                    </div>
+                </div>
+                <div class="col-3 text-center">
+                    <div class="p-2 border rounded">
+                        <div class="fw-bold">${report.averages.A.toFixed(1)}</div>
+                        <small class="text-muted">Pronúncia</small>
+                    </div>
+                </div>
+                <div class="col-3 text-center">
+                    <div class="p-2 border rounded">
+                        <div class="fw-bold">${report.averages.L.toFixed(1)}</div>
+                        <small class="text-muted">Compreensão</small>
+                    </div>
+                </div>
+                <div class="col-3 text-center">
+                    <div class="p-2 border rounded">
+                        <div class="fw-bold">${report.averages.E.toFixed(1)}</div>
+                        <small class="text-muted">Expressão</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    container.innerHTML = html;
+}
+
+/**
+ * Atualiza relatório detalhado
+ */
+function updateDetailedReport(classId = null, reportType = 'progress') {
+    const container = document.getElementById('detailed-report');
+    
+    let report;
+    let title;
+    
+    switch (reportType) {
+        case 'progress':
+            report = generateProgressReport(classId);
+            title = 'Relatório de Progresso';
+            break;
+        case 'attendance':
+            report = generateAttendanceReport(classId);
+            title = 'Relatório de Frequência';
+            break;
+        case 'fale':
+            report = generateFaleReport(classId);
+            title = 'Relatório F.A.L.E';
+            break;
+        default:
+            report = generateProgressReport(classId);
+            title = 'Relatório de Progresso';
+    }
+    
+    let content = '';
+    
+    if (reportType === 'progress') {
+        content = `
+            <h5>${title}</h5>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Turma</th>
+                            <th>Alunos</th>
+                            <th>Média F.A.L.E</th>
+                            <th>Frequência</th>
+                            <th>Últimas Lições</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${report.classes.map(cls => `
+                            <tr>
+                                <td>${cls.className}</td>
+                                <td>${cls.studentCount}</td>
+                                <td>${cls.averageFale.toFixed(1)}</td>
+                                <td>${cls.attendanceRate.toFixed(0)}%</td>
+                                <td>
+                                    <small class="text-muted">
+                                        ${cls.nextLessons.slice(0, 3).join(', ')}
+                                        ${cls.nextLessons.length > 3 ? '...' : ''}
+                                    </small>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } else if (reportType === 'attendance') {
+        content = `
+            <h5>${title}</h5>
+            <p class="text-muted">Frequência geral: ${report.overallAttendance.toFixed(1)}%</p>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Aluno</th>
+                            <th>Turma</th>
+                            <th>Presente</th>
+                            <th>Ausente</th>
+                            <th>Justificado</th>
+                            <th>Taxa</th>
+                            <th>Última</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${report.students.map(student => `
+                            <tr>
+                                <td>${student.studentName}</td>
+                                <td>${student.className}</td>
+                                <td class="text-success">${student.present}</td>
+                                <td class="text-danger">${student.absent}</td>
+                                <td class="text-warning">${student.justified}</td>
+                                <td>
+                                    <span class="badge ${student.attendanceRate >= 90 ? 'bg-success' : 
+                                                         student.attendanceRate >= 70 ? 'bg-warning' : 
+                                                         'bg-danger'}">
+                                        ${student.attendanceRate.toFixed(1)}%
+                                    </span>
+                                </td>
+                                <td><small>${student.lastAttendance}</small></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } else if (reportType === 'fale') {
+        content = `
+            <h5>${title}</h5>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Aluno</th>
+                            <th>Turma</th>
+                            <th>F</th>
+                            <th>A</th>
+                            <th>L</th>
+                            <th>E</th>
+                            <th>Média</th>
+                            <th>Classificação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${report.students.map(student => `
+                            <tr>
+                                <td>${student.studentName}</td>
+                                <td>${student.className}</td>
+                                <td>
+                                    <span class="fale-badge ${FALE_CLASSES[student.fale.F] || ''}">
+                                        ${student.fale.F || '-'}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="fale-badge ${FALE_CLASSES[student.fale.A] || ''}">
+                                        ${student.fale.A || '-'}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="fale-badge ${FALE_CLASSES[student.fale.L] || ''}">
+                                        ${student.fale.L || '-'}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="fale-badge ${FALE_CLASSES[student.fale.E] || ''}">
+                                        ${student.fale.E || '-'}
+                                    </span>
+                                </td>
+                                <td>${student.average.toFixed(1)}</td>
+                                <td>
+                                    <span class="badge ${student.classification === 'Ótimo' ? 'bg-success' : 
+                                                         student.classification === 'Muito Bom' ? 'bg-primary' : 
+                                                         student.classification === 'Bom' ? 'bg-warning' : 
+                                                         'bg-secondary'}">
+                                        ${student.classification}
+                                    </span>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+    
+    container.innerHTML = content;
+}
+
+/* ============================================
    MODAIS
    ============================================ */
 
@@ -1787,6 +3029,33 @@ function showClassModal(classId = null) {
     }
     
     modal.show();
+}
+
+/**
+ * Atualiza seletor de turmas no modal de aluno
+ */
+function updateStudentClassSelect() {
+    const select = document.getElementById('studentClass');
+    if (!select) return;
+    
+    // Salva valor atual
+    const currentValue = select.value;
+    
+    // Limpa opções
+    select.innerHTML = '<option value="">Selecione uma turma</option>';
+    
+    // Adiciona turmas
+    getClasses().forEach(cls => {
+        const option = document.createElement('option');
+        option.value = cls.id;
+        option.textContent = cls.name;
+        select.appendChild(option);
+    });
+    
+    // Restaura valor anterior se ainda existir
+    if (currentValue && select.querySelector(`option[value="${currentValue}"]`)) {
+        select.value = currentValue;
+    }
 }
 
 /**
@@ -1929,8 +3198,8 @@ function showClassDetails(classId) {
                         <thead>
                             <tr>
                                 <th>Nome</th>
-                                <th>Última Lição</th>
-                                <th>Próxima Lição</th>
+                                <th>Última Lição</th
+                                                                <th>Próxima Lição</th>
                                 <th>F.A.L.E</th>
                             </tr>
                         </thead>
@@ -2257,93 +3526,6 @@ function handleFileImport(event) {
     
     // Limpa o input para permitir reimportação do mesmo arquivo
     event.target.value = '';
-}
-
-/* ============================================
-   FUNÇÕES RESTANTES (resumidas por brevidade)
-   ============================================ */
-
-// Nota: Por limitações de espaço, algumas funções serão resumidas.
-// Em um ambiente de produção, elas seriam implementadas completamente.
-
-function updateClassFilters() {
-    // Implementação de filtros de turmas
-}
-
-function updateStudentFilters() {
-    // Implementação de filtros de alunos
-}
-
-function filterClasses() {
-    // Implementação de filtro de turmas
-}
-
-function filterStudents() {
-    // Implementação de filtro de alunos
-}
-
-function updatePlanningClassSelect() {
-    // Atualiza seletor de turmas no planejamento
-}
-
-function updateAttendanceClassSelect() {
-    // Atualiza seletor de turmas na frequência
-}
-
-function updateReportClassSelect() {
-    // Atualiza seletor de turmas nos relatórios
-}
-
-function loadPlanningSection() {
-    // Carrega seção de planejamento
-}
-
-function loadAttendanceTable() {
-    // Carrega tabela de frequência
-}
-
-function loadAttendanceModalContent() {
-    // Carrega conteúdo do modal de frequência
-}
-
-function saveAttendance() {
-    // Salva frequência
-}
-
-function generateAndShowOrder() {
-    // Gera e mostra ordem de atendimento
-}
-
-function generateAndShowPairs() {
-    // Gera e mostra sugestões de pares
-}
-
-function deleteClassWithConfirmation(classId) {
-    // Exclui turma com confirmação
-}
-
-function deleteStudentWithConfirmation(studentId) {
-    // Exclui aluno com confirmação
-}
-
-function updateClassesProgress() {
-    // Atualiza progresso das turmas no dashboard
-}
-
-function updateUpcomingClasses() {
-    // Atualiza próximas aulas no dashboard
-}
-
-function loadSettingsToUI() {
-    // Carrega configurações na interface
-}
-
-function saveSettingsFromUI() {
-    // Salva configurações da interface
-}
-
-function loadReports() {
-    // Carrega relatórios
 }
 
 /* ============================================
