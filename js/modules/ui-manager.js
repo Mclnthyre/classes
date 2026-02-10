@@ -1,18 +1,137 @@
 // js/modules/ui-manager.js
 
-import { getAppData, saveData } from './data-manager.js';
-import { getLessonValue, getLessonDisplay, isEvenLessonValue } from '../utils/lesson-utils.js';
+import { 
+    getAppData, 
+    saveData, 
+    exportData, 
+    importData,
+    addClass, 
+    updateClass, 
+    deleteClass,
+    addStudent, 
+    updateStudent, 
+    deleteStudent,
+    markAttendance, 
+    getAttendanceReport,
+    confirmPeerWork,
+    getPeerHistory
+} from './data-manager.js';
+
+import { 
+    getLessonValue, 
+    getLessonDisplay, 
+    isEvenLessonValue,
+    calculateAverage,
+    getLessonType,
+    formatLesson
+} from '../utils/lesson-utils.js';
+
+import { 
+    generateAttendanceOrder, 
+    generatePeerWorkSuggestions 
+} from './planning-manager.js';
+
+import { 
+    getGitHubConfig, 
+    saveGitHubConfig, 
+    saveToGitHub, 
+    loadFromGitHub,
+    checkGitHubStatus
+} from './github-service.js';
+
+// Referência global para os dados
+let appData;
+
+/**
+ * Inicializa a aplicação
+ */
+export function initApp() {
+    // Carregar dados
+    appData = getAppData();
+    
+    // Inicializar componentes
+    setupDeleteConfirmations();
+    setupAttendanceModal();
+    setupGitHubConfig();
+    
+    // Atualizar UI inicial
+    updateUI();
+    updateCurrentDate();
+    
+    // Configurar event listeners
+    setupEventListeners();
+    
+    // Mostrar dashboard por padrão
+    showSection('dashboard');
+    
+    // Atualizar data a cada minuto
+    setInterval(updateCurrentDate, 60000);
+    
+    // Auto-save a cada 30 segundos
+    setInterval(() => {
+        if (document.getElementById('autoSave')?.checked) {
+            saveData();
+        }
+    }, 30000);
+}
 
 /**
  * Gerencia a exibição de seções
  */
 export function showSection(sectionId) {
-    $('.section-content').addClass('d-none');
-    $(`#${sectionId}`).removeClass('d-none');
+    // Esconder todas as seções
+    document.querySelectorAll('.content-section').forEach(section => {
+        section.style.display = 'none';
+    });
+    
+    // Mostrar a seção selecionada
+    const section = document.getElementById(sectionId);
+    if (section) {
+        section.style.display = 'block';
+    }
+    
+    // Atualizar menu ativo
+    document.querySelectorAll('.list-group-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    
+    // Marcar item ativo no menu
+    const activeItem = document.querySelector(`[onclick="showSection('${sectionId}')"]`);
+    if (activeItem) {
+        activeItem.classList.add('active');
+    }
     
     // Fechar sidebar no mobile
     if (window.innerWidth <= 992) {
         toggleSidebar();
+    }
+    
+    // Atualizar conteúdo específico da seção
+    switch(sectionId) {
+        case 'dashboard':
+            updateDashboard();
+            break;
+        case 'classes':
+            updateClassesList();
+            break;
+        case 'students':
+            updateStudentsList();
+            break;
+        case 'lessons':
+            updatePlanningSection();
+            break;
+        case 'reports':
+            updateReportsSection();
+            break;
+        case 'attendance-report':
+            renderAttendanceReport();
+            break;
+        case 'settings':
+            updateSettingsSection();
+            break;
+        case 'week-view':
+            updateWeekView();
+            break;
     }
 }
 
@@ -20,41 +139,65 @@ export function showSection(sectionId) {
  * Alterna sidebar em dispositivos móveis
  */
 export function toggleSidebar() {
-    const sidebar = $('#sidebar');
-    const overlay = $('#mobileSidebarOverlay');
-    sidebar.toggleClass('active');
-    overlay.toggleClass('active');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('mobileSidebarOverlay');
     
-    if (sidebar.hasClass('active')) {
-        $('body').css('overflow', 'hidden');
+    sidebar.classList.toggle('active');
+    overlay.classList.toggle('active');
+    
+    if (sidebar.classList.contains('active')) {
+        document.body.style.overflow = 'hidden';
     } else {
-        $('body').css('overflow', 'auto');
+        document.body.style.overflow = 'auto';
     }
+}
+
+/**
+ * Mostra alerta
+ */
+export function showAlert(message, type = 'info', duration = 3000) {
+    // Remover alertas anteriores
+    const existingAlerts = document.querySelectorAll('.custom-alert');
+    existingAlerts.forEach(alert => alert.remove());
+    
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `custom-alert alert alert-${type} alert-dismissible fade show`;
+    alertDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        min-width: 300px;
+        max-width: 500px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    `;
+    
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(alertDiv);
+    
+    // Auto-dismiss após duration
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            const bsAlert = new bootstrap.Alert(alertDiv);
+            bsAlert.close();
+        }
+    }, duration);
 }
 
 /**
  * Mostra/oculta tela de carregamento
  */
 export function showLoading(show) {
+    const overlay = document.getElementById('loadingOverlay');
     if (show) {
-        $('#loadingOverlay').removeClass('d-none');
+        overlay.classList.remove('d-none');
     } else {
-        $('#loadingOverlay').addClass('d-none');
+        overlay.classList.add('d-none');
     }
-}
-
-/**
- * Mostra notificação do GitHub
- */
-export function showGitHubStatus(message, type = 'success') {
-    const status = $('#githubStatus');
-    status.removeClass('success error').addClass(type);
-    $('#githubStatusText').text(message);
-    status.fadeIn();
-    
-    setTimeout(() => {
-        status.fadeOut();
-    }, 3000);
 }
 
 /**
@@ -63,72 +206,71 @@ export function showGitHubStatus(message, type = 'success') {
 export function updateCurrentDate() {
     const now = new Date();
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    $('#currentDate').text(now.toLocaleDateString('pt-BR', options));
+    const dateElement = document.getElementById('currentDate');
+    if (dateElement) {
+        dateElement.textContent = now.toLocaleDateString('pt-BR', options);
+    }
+}
+
+/**
+ * Atualiza toda a interface
+ */
+export function updateUI() {
+    updateClassSelects();
+    updateDashboard();
+    updateClassesList();
+    updateStudentsList();
+    updateWeekView();
+    updateNextClasses();
 }
 
 /**
  * Atualiza os selects de turmas
  */
 export function updateClassSelects() {
-    const selects = ['#studentClass', '#selectClassForPlanning', '#reportClassSelect', '#filterClass'];
-    const appData = getAppData();
+    const selects = ['#studentClass', '#selectClassForPlanning', '#reportClassSelect', '#filterClass', '#attendanceClass'];
     
     selects.forEach(selector => {
-        const select = $(selector);
-        const currentValue = select.val();
-        select.empty().append('<option value="">Selecione uma turma</option>');
-        
-        appData.classes.forEach(cls => {
-            select.append(`<option value="${cls.id}">${cls.name}</option>`);
-        });
-        
-        if (currentValue) {
-            select.val(currentValue);
+        const select = document.querySelector(selector);
+        if (select) {
+            const currentValue = select.value;
+            select.innerHTML = '<option value="">Selecione uma turma</option>';
+            
+            appData.classes.forEach(cls => {
+                select.innerHTML += `<option value="${cls.id}">${cls.name}</option>`;
+            });
+            
+            if (currentValue) {
+                select.value = currentValue;
+            }
         }
     });
-}
-
-/**
- * Atualiza filtro de lições
- */
-export function updateLessonFilter() {
-    const filter = $('#filterLesson');
-    const currentValue = filter.val();
-    const classFilter = $('#filterClass').val();
-    const appData = getAppData();
-    
-    let students = appData.students;
-    if (classFilter) {
-        students = students.filter(s => s.classId == classFilter);
-    }
-    
-    const lessons = [...new Set(students.map(s => s.nextLesson))].sort((a, b) => {
-        const aVal = getLessonValue(a);
-        const bVal = getLessonValue(b);
-        return aVal - bVal;
-    });
-    
-    filter.empty().append('<option value="">Todas as lições</option>');
-    lessons.forEach(lesson => {
-        filter.append(`<option value="${lesson}">Lição ${getLessonDisplay(lesson)}</option>`);
-    });
-    
-    if (currentValue && lessons.includes(currentValue)) {
-        filter.val(currentValue);
-    }
 }
 
 /**
  * Atualiza o dashboard
  */
 export function updateDashboard() {
-    const appData = getAppData();
+    appData = getAppData();
     
     // Estatísticas
-    $('#totalClasses').text(appData.classes.length);
-    $('#totalStudents').text(appData.students.length);
-    $('#weekClasses').text('3'); // Temporário
-    $('#pendingPlanning').text('0'); // Temporário
+    document.getElementById('totalClasses').textContent = appData.classes.length;
+    document.getElementById('totalStudents').textContent = appData.students.length;
+    
+    // Calcular aulas esta semana
+    const today = new Date();
+    const weekClasses = appData.classes.filter(cls => {
+        return cls.days.some(day => {
+            const dayIndex = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado']
+                .indexOf(day.toLowerCase());
+            return dayIndex >= 0;
+        });
+    }).length;
+    document.getElementById('weekClasses').textContent = weekClasses;
+    
+    // Planejamentos pendentes (alunos sem próxima lição)
+    const pendingPlanning = appData.students.filter(s => !s.nextLesson || s.nextLesson === '').length;
+    document.getElementById('pendingPlanning').textContent = pendingPlanning;
     
     // Aula de hoje
     updateTodayClass();
@@ -139,25 +281,26 @@ export function updateDashboard() {
  * Atualiza a aula de hoje
  */
 function updateTodayClass() {
-    const container = $('#todayClass');
+    const container = document.getElementById('todayClass');
+    if (!container) return;
+    
     const todayWeekday = new Date().toLocaleDateString('pt-BR', { weekday: 'long' }).toLowerCase();
-    const appData = getAppData();
     const todayClasses = appData.classes.filter(cls => cls.days.includes(todayWeekday));
     
     if (todayClasses.length === 0) {
-        container.html(`
+        container.innerHTML = `
             <div class="text-center py-4">
                 <i class="bi bi-emoji-smile display-4 text-muted"></i>
                 <h5 class="mt-3">Nenhuma aula hoje!</h5>
                 <p class="text-muted">Aproveite para planejar as próximas aulas</p>
             </div>
-        `);
+        `;
         return;
     }
     
     let html = '<div class="list-group">';
     todayClasses.forEach(cls => {
-        const students = appData.students.filter(s => s.classId == cls.id);
+        const students = appData.students.filter(s => s.classId === cls.id);
         
         html += `
             <div class="list-group-item border-0">
@@ -170,24 +313,27 @@ function updateTodayClass() {
                     <i class="bi bi-clock me-1"></i> ${cls.time} |
                     <i class="bi bi-people ms-2 me-1"></i> ${students.length} alunos
                 </p>
-                <button class="btn btn-sm btn-primary" onclick="planLesson(${cls.id})">
-                    <i class="bi bi-pencil-square me-1"></i> Planejar Aula
+                <button class="btn btn-sm btn-primary" onclick="showClassDetails(${cls.id})">
+                    <i class="bi bi-eye me-1"></i> Ver Detalhes
+                </button>
+                <button class="btn btn-sm btn-success ms-2" onclick="openAttendanceModal(${cls.id})">
+                    <i class="bi bi-calendar-check me-1"></i> Registrar Presenças
                 </button>
             </div>
         `;
     });
     html += '</div>';
     
-    container.html(html);
+    container.innerHTML = html;
 }
 
 /**
  * Atualiza próximas aulas
  */
 function updateUpcomingClasses() {
-    const container = $('#upcomingClasses');
-    const nextClasses = $('#nextClassesList');
-    const appData = getAppData();
+    const container = document.getElementById('upcomingClasses');
+    const nextClasses = document.getElementById('nextClassesList');
+    if (!container || !nextClasses) return;
     
     // Próximos 3 dias
     const upcoming = [];
@@ -208,8 +354,8 @@ function updateUpcomingClasses() {
     }
     
     if (upcoming.length === 0) {
-        container.html('<div class="text-center py-4"><p class="text-muted">Nenhuma aula nos próximos dias</p></div>');
-        nextClasses.html('<p class="text-muted small">Nenhuma aula agendada</p>');
+        container.innerHTML = '<div class="text-center py-4"><p class="text-muted">Nenhuma aula nos próximos dias</p></div>';
+        nextClasses.innerHTML = '<p class="text-muted small">Nenhuma aula agendada</p>';
         return;
     }
     
@@ -229,7 +375,7 @@ function updateUpcomingClasses() {
         `;
     });
     html += '</div>';
-    container.html(html);
+    container.innerHTML = html;
     
     // Sidebar
     let sidebarHtml = '';
@@ -246,62 +392,66 @@ function updateUpcomingClasses() {
             </div>
         `;
     });
-    nextClasses.html(sidebarHtml);
+    nextClasses.innerHTML = sidebarHtml;
 }
 
 /**
  * Atualiza lista de turmas
  */
 export function updateClassesList() {
-    const container = $('#classesList');
-    const appData = getAppData();
+    const container = document.getElementById('classesList');
+    if (!container) return;
+    
+    appData = getAppData();
     
     if (appData.classes.length === 0) {
-        container.html(`
+        container.innerHTML = `
             <div class="text-center py-5">
                 <i class="bi bi-people display-1 text-muted"></i>
                 <h5 class="mt-3">Nenhuma turma cadastrada</h5>
                 <p class="text-muted">Clique em "Nova Turma" para começar</p>
             </div>
-        `);
+        `;
         return;
     }
     
+    container.innerHTML = '';
     appData.classes.forEach(cls => {
-        const studentCount = appData.students.filter(s => s.classId == cls.id).length;
+        const studentCount = appData.students.filter(s => s.classId === cls.id).length;
         
-        container.append(`
-            <div class="card mb-3">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <h5 class="mb-1">
-                                <span class="class-badge" style="background:${cls.color};color:white;">
-                                    ${cls.name}
-                                </span>
-                            </h5>
-                            <p class="text-muted mb-1">
-                                <i class="bi bi-calendar-week me-1"></i>
-                                ${cls.days.map(d => d.charAt(0).toUpperCase() + d.slice(1)).join(', ')}
-                                às ${cls.time}
-                            </p>
-                            <p class="mb-0">
-                                <i class="bi bi-people me-1"></i>
-                                ${studentCount} aluno${studentCount !== 1 ? 's' : ''}
-                            </p>
-                        </div>
-                        <div>
-                            <button class="btn btn-sm btn-outline-primary" onclick="showAddClassModal(${cls.id})">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-danger ms-2" onclick="deleteClass(${cls.id})">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
+        const card = document.createElement('div');
+        card.className = 'card mb-3';
+        card.innerHTML = `
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h5 class="mb-1">
+                            <span class="class-badge" style="background:${cls.color};color:white;">
+                                ${cls.name}
+                            </span>
+                        </h5>
+                        <p class="text-muted mb-1">
+                            <i class="bi bi-calendar-week me-1"></i>
+                            ${cls.days.map(d => d.charAt(0).toUpperCase() + d.slice(1)).join(', ')}
+                            às ${cls.time}
+                        </p>
+                        <p class="mb-0">
+                            <i class="bi bi-people me-1"></i>
+                            ${studentCount} aluno${studentCount !== 1 ? 's' : ''}
+                        </p>
+                    </div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary" onclick="showAddClassModal(${cls.id})">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger ms-2" onclick="deleteClass(${cls.id})">
+                            <i class="bi bi-trash"></i>
+                        </button>
                     </div>
                 </div>
             </div>
-        `);
+        `;
+        container.appendChild(card);
     });
 }
 
@@ -309,24 +459,26 @@ export function updateClassesList() {
  * Atualiza lista de alunos
  */
 export function updateStudentsList() {
-    const container = $('#studentsList');
-    const appData = getAppData();
+    const container = document.getElementById('studentsList');
+    if (!container) return;
+    
+    appData = getAppData();
     
     if (appData.students.length === 0) {
-        container.html(`
+        container.innerHTML = `
             <div class="text-center py-5">
                 <i class="bi bi-person display-1 text-muted"></i>
                 <h5 class="mt-3">Nenhum aluno cadastrado</h5>
                 <p class="text-muted">Clique em "Novo Aluno" para começar</p>
             </div>
-        `);
+        `;
         return;
     }
     
     let filteredStudents = [...appData.students];
-    const searchTerm = $('#searchStudent').val().toLowerCase();
-    const classFilter = $('#filterClass').val();
-    const lessonFilter = $('#filterLesson').val();
+    const searchTerm = document.getElementById('searchStudent')?.value.toLowerCase() || '';
+    const classFilter = document.getElementById('filterClass')?.value;
+    const lessonFilter = document.getElementById('filterLesson')?.value;
     
     if (searchTerm) {
         filteredStudents = filteredStudents.filter(s => s.name.toLowerCase().includes(searchTerm));
@@ -339,16 +491,17 @@ export function updateStudentsList() {
     }
     
     if (filteredStudents.length === 0) {
-        container.html(`
+        container.innerHTML = `
             <div class="text-center py-5">
                 <i class="bi bi-search display-1 text-muted"></i>
                 <h5 class="mt-3">Nenhum aluno encontrado</h5>
                 <p class="text-muted">Tente alterar os filtros de busca</p>
             </div>
-        `);
+        `;
         return;
     }
     
+    container.innerHTML = '';
     filteredStudents.forEach(student => {
         const cls = appData.classes.find(c => c.id == student.classId);
         const className = cls ? cls.name : 'Turma não encontrada';
@@ -359,59 +512,652 @@ export function updateStudentsList() {
         const lessonType = isReview ? 'RW' : (isEven ? 'PAR' : 'ÍMPAR');
         const lessonClass = isReview ? 'lesson-review' : (isEven ? 'lesson-even' : 'lesson-odd');
         
-        container.append(`
-            <div class="student-item ${lessonClass}">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="mb-1">${student.name}</h6>
-                        <p class="mb-1 text-muted small">
-                            <span class="badge" style="background:${classColor};color:white;">
-                                ${className}
-                            </span>
-                            <span class="ms-2">
-                                Lição ${getLessonDisplay(student.nextLesson)} (${lessonType})
-                            </span>
-                        </p>
-                        <div class="mt-2">
-                            <span class="fale-badge fale-${student.fale.F}" title="Fluência">F</span>
-                            <span class="fale-badge fale-${student.fale.A}" title="Pronúncia">A</span>
-                            <span class="fale-badge fale-${student.fale.L}" title="Compreensão">L</span>
-                            <span class="fale-badge fale-${student.fale.E}" title="Expressão">E</span>
-                            <span class="ms-2 small">
-                                Média: ${student.average.toFixed(1)}
-                            </span>
-                        </div>
-                    </div>
-                    <div>
-                        <button class="btn btn-sm btn-outline-primary" onclick="showAddStudentModal(${student.id})">
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger ms-2" onclick="deleteStudent(${student.id})">
-                            <i class="bi bi-trash"></i>
-                        </button>
+        const studentItem = document.createElement('div');
+        studentItem.className = `student-item ${lessonClass} mb-3 p-3 rounded`;
+        studentItem.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-1">${student.name}</h6>
+                    <p class="mb-1 text-muted small">
+                        <span class="badge" style="background:${classColor};color:white;">
+                            ${className}
+                        </span>
+                        <span class="ms-2">
+                            Lição ${getLessonDisplay(student.nextLesson)} (${lessonType})
+                        </span>
+                    </p>
+                    <div class="mt-2">
+                        <span class="fale-badge fale-${student.fale.F}" title="Fluência">F</span>
+                        <span class="fale-badge fale-${student.fale.A}" title="Pronúncia">A</span>
+                        <span class="fale-badge fale-${student.fale.L}" title="Compreensão">L</span>
+                        <span class="fale-badge fale-${student.fale.E}" title="Expressão">E</span>
+                        <span class="ms-2 small">
+                            Média: ${student.average.toFixed(1)}
+                        </span>
                     </div>
                 </div>
+                <div>
+                    <button class="btn btn-sm btn-outline-primary" onclick="showAddStudentModal(${student.id})">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger ms-2" onclick="deleteStudent(${student.id})">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
             </div>
-        `);
+        `;
+        container.appendChild(studentItem);
     });
 }
 
 /**
- * Atualiza toda a interface
+ * Atualiza a visão semanal
  */
-export function updateUI() {
-    updateDashboard();
-    updateClassesList();
-    updateStudentsList();
-    updateWeekView();
-    updateNextClasses();
-    updateClassSelects();
-    updateLessonFilter();
+export function updateWeekView() {
+    const weekDays = document.getElementById('weekDays');
+    if (!weekDays) return;
+    
+    const days = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+    
+    weekDays.innerHTML = '';
+    days.forEach(day => {
+        const dayClasses = appData.classes.filter(cls => 
+            cls.days.map(d => d.toLowerCase()).includes(day.toLowerCase())
+        );
+        
+        const col = document.createElement('div');
+        col.className = 'col';
+        col.innerHTML = `
+            <div class="card h-100">
+                <div class="card-header">
+                    <h6 class="mb-0">${day}</h6>
+                </div>
+                <div class="card-body">
+                    ${dayClasses.length > 0 ? 
+                        dayClasses.map(cls => `
+                            <div class="mb-2">
+                                <div class="small">${cls.name}</div>
+                                <div class="text-muted small">${cls.time}</div>
+                            </div>
+                        `).join('') : 
+                        '<p class="text-muted small">Nenhuma aula</p>'
+                    }
+                </div>
+            </div>
+        `;
+        weekDays.appendChild(col);
+    });
 }
 
-// Adicione estas funções após as funções de aluno:
+/**
+ * Atualiza seção de planejamento
+ */
+function updatePlanningSection() {
+    const selectClass = document.getElementById('selectClassForPlanning');
+    const planningDate = document.getElementById('planningDate');
+    
+    if (planningDate && !planningDate.value) {
+        planningDate.value = new Date().toISOString().split('T')[0];
+    }
+    
+    if (selectClass && selectClass.value) {
+        generateAttendanceOrder();
+    }
+}
 
-// Funções de Presença
+/**
+ * Atualiza seção de relatórios
+ */
+function updateReportsSection() {
+    // Implementar se necessário
+}
+
+/**
+ * Atualiza seção de configurações
+ */
+function updateSettingsSection() {
+    const config = getGitHubConfig();
+    if (config) {
+        document.getElementById('githubUsername').value = config.username || '';
+        document.getElementById('githubRepo').value = config.repo || '';
+        document.getElementById('githubToken').value = config.token || '';
+    }
+}
+
+/**
+ * Configura event listeners
+ */
+function setupEventListeners() {
+    // Busca de alunos
+    const searchStudent = document.getElementById('searchStudent');
+    if (searchStudent) {
+        searchStudent.addEventListener('input', updateStudentsList);
+    }
+    
+    // Filtro de turma
+    const filterClass = document.getElementById('filterClass');
+    if (filterClass) {
+        filterClass.addEventListener('change', function() {
+            updateStudentsList();
+            updateLessonFilter();
+        });
+    }
+    
+    // Filtro de lições
+    const filterLesson = document.getElementById('filterLesson');
+    if (filterLesson) {
+        filterLesson.addEventListener('change', updateStudentsList);
+    }
+    
+    // Configurações
+    const autoSave = document.getElementById('autoSave');
+    if (autoSave) {
+        autoSave.addEventListener('change', function() {
+            appData.settings = appData.settings || {};
+            appData.settings.autoSave = this.checked;
+            saveData();
+        });
+    }
+    
+    const themeSelect = document.getElementById('themeSelect');
+    if (themeSelect) {
+        themeSelect.addEventListener('change', function() {
+            document.body.setAttribute('data-theme', this.value);
+            appData.settings = appData.settings || {};
+            appData.settings.theme = this.value;
+            saveData();
+        });
+    }
+}
+
+/**
+ * Atualiza filtro de lições
+ */
+export function updateLessonFilter() {
+    const filter = document.getElementById('filterLesson');
+    if (!filter) return;
+    
+    const currentValue = filter.value;
+    const classFilter = document.getElementById('filterClass')?.value;
+    
+    let students = appData.students;
+    if (classFilter) {
+        students = students.filter(s => s.classId == classFilter);
+    }
+    
+    const lessons = [...new Set(students.map(s => s.nextLesson))].sort((a, b) => {
+        const aVal = getLessonValue(a);
+        const bVal = getLessonValue(b);
+        return aVal - bVal;
+    });
+    
+    filter.innerHTML = '<option value="">Todas as lições</option>';
+    lessons.forEach(lesson => {
+        filter.innerHTML += `<option value="${lesson}">Lição ${getLessonDisplay(lesson)}</option>`;
+    });
+    
+    if (currentValue && lessons.includes(currentValue)) {
+        filter.value = currentValue;
+    }
+}
+
+/**
+ * Atualiza próximas aulas no sidebar
+ */
+function updateNextClasses() {
+    const nextClasses = document.getElementById('nextClassesList');
+    if (!nextClasses) return;
+    
+    const today = new Date();
+    const nextClassesData = [];
+    
+    for (let i = 1; i <= 5; i++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() + i);
+        const weekday = date.toLocaleDateString('pt-BR', { weekday: 'long' }).toLowerCase();
+        
+        const dayClasses = appData.classes.filter(cls => cls.days.includes(weekday));
+        if (dayClasses.length > 0) {
+            dayClasses.forEach(cls => {
+                nextClassesData.push({
+                    day: weekday.charAt(0).toUpperCase() + weekday.slice(1),
+                    time: cls.time,
+                    name: cls.name,
+                    color: cls.color
+                });
+            });
+        }
+    }
+    
+    if (nextClassesData.length === 0) {
+        nextClasses.innerHTML = '<p class="text-muted small">Nenhuma aula agendada</p>';
+        return;
+    }
+    
+    let html = '';
+    nextClassesData.slice(0, 3).forEach(cls => {
+        html += `
+            <div class="mb-2">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="small">${cls.name}</span>
+                    </div>
+                    <div>
+                        <span class="badge small" style="background:${cls.color}">${cls.time}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    nextClasses.innerHTML = html;
+}
+
+/**
+ * Gera ordem de atendimento
+ */
+window.generateAttendanceOrder = function() {
+    const classId = document.getElementById('selectClassForPlanning')?.value;
+    if (!classId) {
+        showAlert('Selecione uma turma primeiro!', 'warning');
+        return;
+    }
+    
+    const orderContainer = document.getElementById('attendanceOrder');
+    const pairsContainer = document.getElementById('peerWorkPairs');
+    
+    if (!orderContainer || !pairsContainer) return;
+    
+    const students = appData.students.filter(s => s.classId == classId);
+    if (students.length === 0) {
+        orderContainer.innerHTML = '<p class="text-muted">Nenhum aluno nesta turma</p>';
+        pairsContainer.innerHTML = '<p class="text-muted">Nenhum par sugerido</p>';
+        return;
+    }
+    
+    // Gerar ordem
+    const orderedStudents = generateAttendanceOrder(students);
+    
+    // Exibir ordem
+    let orderHtml = '<div class="list-group">';
+    orderedStudents.forEach((student, index) => {
+        const lessonValue = getLessonValue(student.nextLesson);
+        const isReview = lessonValue >= 1000;
+        const isEven = !isReview && (lessonValue % 2 === 0);
+        const badgeClass = isReview ? 'bg-purple' : (isEven ? 'bg-success' : 'bg-pink');
+        
+        orderHtml += `
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="badge ${badgeClass} me-2">${index + 1}</span>
+                    ${student.name}
+                </div>
+                <div>
+                    <span class="badge bg-light text-dark">Lição ${getLessonDisplay(student.nextLesson)}</span>
+                </div>
+            </div>
+        `;
+    });
+    orderHtml += '</div>';
+    orderContainer.innerHTML = orderHtml;
+    
+    // Gerar sugestões de pares
+    const pairs = generatePeerWorkSuggestions(students);
+    
+    // Exibir pares
+    let pairsHtml = '<div class="list-group">';
+    pairs.forEach(pair => {
+        pairsHtml += `
+            <div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div>${pair.student1.name}</div>
+                        <div>${pair.student2.name}</div>
+                    </div>
+                    <div>
+                        <button class="btn btn-sm btn-success" onclick="confirmPeerWork(${pair.student1.id}, ${pair.student2.id})">
+                            <i class="bi bi-check"></i> Confirmar
+                        </button>
+                    </div>
+                </div>
+                <div class="small text-muted mt-1">
+                    Diferença: ${pair.difference} lições
+                </div>
+            </div>
+        `;
+    });
+    pairsHtml += '</div>';
+    pairsContainer.innerHTML = pairsHtml;
+};
+
+/**
+ * Modal para adicionar/editar turma
+ */
+window.showAddClassModal = function(classId = null) {
+    const modal = new bootstrap.Modal(document.getElementById('addClassModal'));
+    const modalTitle = document.getElementById('classModalTitle');
+    const editClassId = document.getElementById('editClassId');
+    const className = document.getElementById('className');
+    const classTime = document.getElementById('classTime');
+    const classColor = document.getElementById('classColor');
+    
+    // Resetar checkboxes
+    ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'].forEach(day => {
+        const checkbox = document.getElementById(`day${day.charAt(0).toUpperCase() + day.slice(1)}`);
+        if (checkbox) checkbox.checked = false;
+    });
+    
+    if (classId) {
+        // Editar turma existente
+        const cls = appData.classes.find(c => c.id == classId);
+        if (cls) {
+            modalTitle.textContent = 'Editar Turma';
+            editClassId.value = cls.id;
+            className.value = cls.name;
+            classTime.value = cls.time;
+            classColor.value = cls.color;
+            
+            cls.days.forEach(day => {
+                const checkbox = document.getElementById(`day${day.charAt(0).toUpperCase() + day.slice(1)}`);
+                if (checkbox) checkbox.checked = true;
+            });
+        }
+    } else {
+        // Nova turma
+        modalTitle.textContent = 'Nova Turma';
+        editClassId.value = '';
+        className.value = '';
+        classTime.value = '16:00';
+        classColor.value = '#3498db';
+    }
+    
+    modal.show();
+};
+
+/**
+ * Salvar turma
+ */
+window.saveClass = function() {
+    const editClassId = document.getElementById('editClassId').value;
+    const className = document.getElementById('className').value;
+    const classTime = document.getElementById('classTime').value;
+    const classColor = document.getElementById('classColor').value;
+    
+    // Coletar dias selecionados
+    const days = [];
+    ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'].forEach(day => {
+        const checkbox = document.getElementById(`day${day.charAt(0).toUpperCase() + day.slice(1)}`);
+        if (checkbox && checkbox.checked) {
+            days.push(day);
+        }
+    });
+    
+    if (!className || days.length === 0 || !classTime) {
+        showAlert('Preencha todos os campos obrigatórios!', 'warning');
+        return;
+    }
+    
+    const classData = {
+        name: className,
+        days: days,
+        time: classTime,
+        color: classColor
+    };
+    
+    if (editClassId) {
+        // Atualizar turma existente
+        updateClass(parseInt(editClassId), classData);
+        showAlert('Turma atualizada com sucesso!', 'success');
+    } else {
+        // Criar nova turma
+        addClass(classData);
+        showAlert('Turma criada com sucesso!', 'success');
+    }
+    
+    updateUI();
+    bootstrap.Modal.getInstance(document.getElementById('addClassModal')).hide();
+};
+
+/**
+ * Excluir turma
+ */
+window.deleteClass = function(classId) {
+    if (confirm('Tem certeza que deseja excluir esta turma? Todos os alunos desta turma também serão excluídos.')) {
+        if (confirm('CONFIRMAÇÃO FINAL: Esta ação não pode ser desfeita. Continuar?')) {
+            deleteClass(classId);
+            showAlert('Turma excluída com sucesso!', 'success');
+            updateUI();
+        }
+    }
+};
+
+/**
+ * Modal para adicionar/editar aluno
+ */
+window.showAddStudentModal = function(studentId = null) {
+    const modal = new bootstrap.Modal(document.getElementById('addStudentModal'));
+    const modalTitle = document.getElementById('studentModalTitle');
+    const editStudentId = document.getElementById('editStudentId');
+    const studentName = document.getElementById('studentName');
+    const studentClass = document.getElementById('studentClass');
+    const lastLesson = document.getElementById('lastLesson');
+    const nextLesson = document.getElementById('nextLesson');
+    const scoreF = document.getElementById('scoreF');
+    const scoreA = document.getElementById('scoreA');
+    const scoreL = document.getElementById('scoreL');
+    const scoreE = document.getElementById('scoreE');
+    
+    // Atualizar select de turmas
+    updateClassSelects();
+    
+    if (studentId) {
+        // Editar aluno existente
+        const student = appData.students.find(s => s.id == studentId);
+        if (student) {
+            modalTitle.textContent = 'Editar Aluno';
+            editStudentId.value = student.id;
+            studentName.value = student.name;
+            studentClass.value = student.classId;
+            lastLesson.value = student.lastLesson;
+            nextLesson.value = student.nextLesson;
+            scoreF.value = student.fale.F;
+            scoreA.value = student.fale.A;
+            scoreL.value = student.fale.L;
+            scoreE.value = student.fale.E;
+            updateAverageDisplay();
+        }
+    } else {
+        // Novo aluno
+        modalTitle.textContent = 'Novo Aluno';
+        editStudentId.value = '';
+        studentName.value = '';
+        studentClass.value = '';
+        lastLesson.value = '';
+        nextLesson.value = '';
+        scoreF.value = 'B';
+        scoreA.value = 'B';
+        scoreL.value = 'B';
+        scoreE.value = 'B';
+        updateAverageDisplay();
+    }
+    
+    modal.show();
+};
+
+/**
+ * Atualiza exibição da média
+ */
+function updateAverageDisplay() {
+    const fScore = document.getElementById('scoreF').value;
+    const aScore = document.getElementById('scoreA').value;
+    const lScore = document.getElementById('scoreL').value;
+    const eScore = document.getElementById('scoreE').value;
+    
+    const average = calculateAverage(fScore, aScore, lScore, eScore);
+    const averageElement = document.getElementById('calculatedAverage');
+    
+    let description = '';
+    if (average >= 3.5) description = 'Ótimo';
+    else if (average >= 2.5) description = 'Muito Bom';
+    else if (average >= 1.5) description = 'Bom';
+    else description = 'Regular';
+    
+    averageElement.textContent = `${description} (${average.toFixed(1)})`;
+}
+
+// Adicionar listeners para atualizar a média
+document.addEventListener('DOMContentLoaded', function() {
+    ['scoreF', 'scoreA', 'scoreL', 'scoreE'].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('change', updateAverageDisplay);
+        }
+    });
+});
+
+/**
+ * Salvar aluno
+ */
+window.saveStudent = function() {
+    const editStudentId = document.getElementById('editStudentId').value;
+    const studentName = document.getElementById('studentName').value;
+    const studentClass = document.getElementById('studentClass').value;
+    const lastLesson = document.getElementById('lastLesson').value;
+    const nextLesson = document.getElementById('nextLesson').value;
+    const scoreF = document.getElementById('scoreF').value;
+    const scoreA = document.getElementById('scoreA').value;
+    const scoreL = document.getElementById('scoreL').value;
+    const scoreE = document.getElementById('scoreE').value;
+    
+    if (!studentName || !studentClass || !nextLesson) {
+        showAlert('Preencha todos os campos obrigatórios!', 'warning');
+        return;
+    }
+    
+    const studentData = {
+        name: studentName,
+        classId: parseInt(studentClass),
+        lastLesson: lastLesson || nextLesson,
+        nextLesson: nextLesson,
+        fale: {
+            F: scoreF,
+            A: scoreA,
+            L: scoreL,
+            E: scoreE
+        },
+        average: calculateAverage(scoreF, scoreA, scoreL, scoreE),
+        attendance: [],
+        peerHistory: []
+    };
+    
+    if (editStudentId) {
+        // Atualizar aluno existente
+        updateStudent(parseInt(editStudentId), studentData);
+        showAlert('Aluno atualizado com sucesso!', 'success');
+    } else {
+        // Criar novo aluno
+        addStudent(studentData);
+        showAlert('Aluno criado com sucesso!', 'success');
+    }
+    
+    updateUI();
+    bootstrap.Modal.getInstance(document.getElementById('addStudentModal')).hide();
+};
+
+/**
+ * Excluir aluno
+ */
+window.deleteStudent = function(studentId) {
+    const student = appData.students.find(s => s.id == studentId);
+    if (!student) return;
+    
+    if (confirm(`Tem certeza que deseja excluir o aluno "${student.name}"?`)) {
+        if (confirm('CONFIRMAÇÃO FINAL: Esta ação não pode ser desfeita. Continuar?')) {
+            deleteStudent(studentId);
+            showAlert('Aluno excluído com sucesso!', 'success');
+            updateUI();
+        }
+    }
+};
+
+/**
+ * Mostrar detalhes da turma
+ */
+window.showClassDetails = function(classId) {
+    const modal = new bootstrap.Modal(document.getElementById('classDetailsModal'));
+    const classObj = appData.classes.find(c => c.id == classId);
+    const students = appData.students.filter(s => s.classId == classId);
+    
+    if (!classObj) return;
+    
+    document.getElementById('classDetailsTitle').textContent = classObj.name;
+    document.getElementById('classDetailsName').textContent = classObj.name;
+    
+    const classActions = document.getElementById('classActions');
+    classActions.innerHTML = '';
+    
+    // Botão de presenças
+    const attendanceBtn = document.createElement('button');
+    attendanceBtn.className = 'btn btn-info btn-sm';
+    attendanceBtn.innerHTML = '<i class="bi bi-calendar-check"></i> Presenças';
+    attendanceBtn.onclick = () => openAttendanceModal(classId);
+    classActions.appendChild(attendanceBtn);
+    
+    // Botão de planejamento
+    const planningBtn = document.createElement('button');
+    planningBtn.className = 'btn btn-primary btn-sm ms-2';
+    planningBtn.innerHTML = '<i class="bi bi-journal-check"></i> Planejar';
+    planningBtn.onclick = () => {
+        showSection('lessons');
+        document.getElementById('selectClassForPlanning').value = classId;
+        generateAttendanceOrder();
+        modal.hide();
+    };
+    classActions.appendChild(planningBtn);
+    
+    // Listar alunos
+    const studentsList = document.getElementById('classStudentsList');
+    if (students.length === 0) {
+        studentsList.innerHTML = '<p class="text-muted">Nenhum aluno nesta turma</p>';
+    } else {
+        let html = '<div class="list-group">';
+        students.forEach(student => {
+            const lessonValue = getLessonValue(student.nextLesson);
+            const isReview = lessonValue >= 1000;
+            const isEven = !isReview && (lessonValue % 2 === 0);
+            const lessonType = isReview ? 'RW' : (isEven ? 'PAR' : 'ÍMPAR');
+            
+            html += `
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">${student.name}</h6>
+                            <p class="mb-1 small text-muted">
+                                Lição ${getLessonDisplay(student.nextLesson)} (${lessonType})
+                            </p>
+                            <div>
+                                <span class="fale-badge fale-${student.fale.F}" title="Fluência">F</span>
+                                <span class="fale-badge fale-${student.fale.A}" title="Pronúncia">A</span>
+                                <span class="fale-badge fale-${student.fale.L}" title="Compreensão">L</span>
+                                <span class="fale-badge fale-${student.fale.E}" title="Expressão">E</span>
+                            </div>
+                        </div>
+                        <div>
+                            <span class="badge bg-light text-dark">Média: ${student.average.toFixed(1)}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        studentsList.innerHTML = html;
+    }
+    
+    modal.show();
+};
+
+/**
+ * Funções de Presença
+ */
 export function setupAttendanceModal() {
     // Criar modal de presença dinamicamente
     const modalHTML = `
@@ -453,17 +1199,19 @@ export function setupAttendanceModal() {
     document.body.insertAdjacentHTML('beforeend', modalHTML);
 }
 
-export function openAttendanceModal(classId) {
-    const modal = new bootstrap.Modal(document.getElementById('attendanceModal'));
+window.openAttendanceModal = function(classId) {
+    const modal = document.getElementById('attendanceModal');
+    const bsModal = new bootstrap.Modal(modal);
+    
     const students = appData.students.filter(s => s.classId === classId);
     const classObj = appData.classes.find(c => c.id === classId);
     
-    if (!classObj) {
-        showAlert('Turma não encontrada!', 'danger');
+    if (!classObj || students.length === 0) {
+        showAlert('Turma não encontrada ou sem alunos!', 'danger');
         return;
     }
     
-    document.querySelector('.modal-title').textContent = `Presenças - ${classObj.name}`;
+    document.querySelector('#attendanceModal .modal-title').textContent = `Presenças - ${classObj.name}`;
     
     const dateInput = document.getElementById('attendanceDate');
     const attendanceList = document.getElementById('attendanceList');
@@ -525,13 +1273,15 @@ export function openAttendanceModal(classId) {
         });
         
         showAlert(`${saved} presenças salvas com sucesso!`, 'success');
-        modal.hide();
+        bsModal.hide();
     };
     
-    modal.show();
-}
+    bsModal.show();
+};
 
-// Funções de Relatório de Frequência
+/**
+ * Relatório de Frequência
+ */
 export function renderAttendanceReport() {
     const container = document.getElementById('attendanceReportContainer');
     if (!container) return;
@@ -688,25 +1438,128 @@ function generateAttendanceReport() {
     resultsDiv.innerHTML = html;
 }
 
-// Atualizar a função confirmPeerWork no UI
-export function setupPeerConfirmation(student1Id, student2Id) {
+/**
+ * Confirmar peer work
+ */
+window.confirmPeerWork = function(student1Id, student2Id) {
     if (confirm('Confirmar este peer work? Isso será salvo no histórico dos alunos.')) {
         if (confirmPeerWork(student1Id, student2Id)) {
             showAlert('Peer work confirmado e salvo no histórico!', 'success');
             // Atualizar a interface
-            renderClassDetails(appData.students.find(s => s.id === student1Id)?.classId);
+            generateAttendanceOrder();
         }
+    }
+};
+
+/**
+ * Configurar confirmações de exclusão
+ */
+export function setupDeleteConfirmations() {
+    // As funções deleteClass e deleteStudent já estão configuradas
+    // com confirmações duplas em suas implementações acima
+}
+
+/**
+ * Configurar GitHub
+ */
+function setupGitHubConfig() {
+    const config = getGitHubConfig();
+    if (config) {
+        const usernameInput = document.getElementById('githubUsername');
+        const repoInput = document.getElementById('githubRepo');
+        const tokenInput = document.getElementById('githubToken');
+        
+        if (usernameInput) usernameInput.value = config.username || '';
+        if (repoInput) repoInput.value = config.repo || '';
+        if (tokenInput) tokenInput.value = config.token || '';
     }
 }
 
-// Adicionar botão de presença na visualização da turma
-export function addAttendanceButton(classId) {
-    const container = document.getElementById('classActions');
-    if (!container) return;
+/**
+ * Salvar configuração do GitHub
+ */
+window.saveGitHubConfig = function() {
+    const username = document.getElementById('githubUsername').value;
+    const repo = document.getElementById('githubRepo').value;
+    const token = document.getElementById('githubToken').value;
     
-    const button = document.createElement('button');
-    button.className = 'btn btn-info me-2';
-    button.innerHTML = '<i class="bi bi-calendar-check"></i> Registrar Presenças';
-    button.onclick = () => openAttendanceModal(classId);
-    container.appendChild(button);
-}
+    if (!username || !repo || !token) {
+        showAlert('Preencha todos os campos do GitHub!', 'warning');
+        return;
+    }
+    
+    saveGitHubConfig({ username, repo, token });
+    showAlert('Configuração do GitHub salva com sucesso!', 'success');
+};
+
+/**
+ * Exportar dados
+ */
+window.exportData = exportData;
+
+/**
+ * Importar dados
+ */
+window.importData = importData;
+
+/**
+ * Salvar no GitHub
+ */
+window.saveToGitHub = async function() {
+    showLoading(true);
+    const result = await saveToGitHub(appData, 'Backup automático - ' + new Date().toLocaleString());
+    showLoading(false);
+    
+    if (result.success) {
+        showAlert('Backup salvo com sucesso no GitHub!', 'success');
+    } else {
+        showAlert(`Erro ao salvar no GitHub: ${result.error}`, 'danger');
+    }
+};
+
+/**
+ * Carregar do GitHub
+ */
+window.loadFromGitHub = async function() {
+    if (!confirm('Isso substituirá todos os dados locais. Continuar?')) {
+        return;
+    }
+    
+    showLoading(true);
+    const result = await loadFromGitHub();
+    showLoading(false);
+    
+    if (result.success) {
+        showAlert('Dados carregados com sucesso do GitHub!', 'success');
+        appData = getAppData();
+        updateUI();
+    } else {
+        showAlert(`Erro ao carregar do GitHub: ${result.error}`, 'danger');
+    }
+};
+
+/**
+ * Selecionar cor
+ */
+window.selectColor = function(color) {
+    document.getElementById('classColor').value = color;
+    document.querySelectorAll('.color-picker').forEach(picker => {
+        picker.classList.remove('selected');
+        if (picker.style.backgroundColor === color || 
+            picker.getAttribute('data-color') === color) {
+            picker.classList.add('selected');
+        }
+    });
+};
+
+// Inicializar seletores de cor quando o DOM estiver carregado
+document.addEventListener('DOMContentLoaded', function() {
+    const colorPickers = document.querySelectorAll('.color-picker');
+    colorPickers.forEach(picker => {
+        const color = picker.style.backgroundColor;
+        picker.setAttribute('data-color', color);
+        picker.addEventListener('click', function() {
+            selectColor(color);
+        });
+    });
+});
