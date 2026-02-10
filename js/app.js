@@ -804,6 +804,66 @@ function suggestPeerPairs(classId) {
     
     return pairs;
 }
+/**
+ * Salva tabela de frequência
+ */
+function saveAttendanceTable() {
+    const classId = document.getElementById('attendance-class-select').value;
+    const date = document.getElementById('attendance-date').value;
+    
+    if (!classId || !date) {
+        showNotification('Selecione uma turma e data!', 'warning');
+        return;
+    }
+    
+    const attendanceData = [];
+    const rows = document.querySelectorAll('#attendance-table-container tbody tr');
+    
+    rows.forEach(row => {
+        const studentId = parseInt(row.querySelector('.attendance-status').getAttribute('data-student-id'));
+        const status = row.querySelector('.attendance-status').value;
+        const homework = row.querySelector('.homework-status').value;
+        const preparation = row.querySelector('.preparation-status').value;
+        const evaluation = row.querySelector('.evaluation-text').value.trim();
+        const observation = row.querySelector('.observation-text').value.trim();
+        
+        attendanceData.push({
+            studentId,
+            status,
+            homework,
+            preparation,
+            evaluation,
+            observation
+        });
+    });
+    
+    registerAttendance(parseInt(classId), date, attendanceData);
+    showNotification('Frequência salva com sucesso!', 'success');
+}
+
+/**
+ * Confirma par de peer work
+ */
+function confirmPeerPair(pair) {
+    const date = document.getElementById('planning-date').value;
+    const classId = document.getElementById('planning-class-select').value;
+    
+    if (!date || !classId) {
+        showNotification('Selecione uma data e turma!', 'warning');
+        return;
+    }
+    
+    const pairData = [{
+        student1Id: pair.student1.id,
+        student1Name: pair.student1.name,
+        student2Id: pair.student2.id,
+        student2Name: pair.student2.name,
+        lesson: `${pair.student1.nextLesson} ↔ ${pair.student2.nextLesson}`
+    }];
+    
+    registerPeerWork(parseInt(classId), date, pairData);
+    showNotification('Par confirmado e salvo no histórico!', 'success');
+}
 
 /**
  * Registra peer work realizado
