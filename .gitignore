@@ -1,0 +1,6 @@
+# No terminal, na pasta do projeto:
+echo "node_modules/
+.DS_Store
+*.log
+.env
+data-backup-*.json" > .gitignore
