@@ -1458,10 +1458,10 @@ function renderClassesList() {
         container.innerHTML = `
             <div class="col-12">
                 <div class="empty-state">
-                    <i class="bi bi-people-fill"></i>
+                    <i class="bi bi-people-fill" style="font-size: 3rem;"></i>
                     <h5>Nenhuma turma cadastrada</h5>
                     <p>Comece criando sua primeira turma!</p>
-                    <button class="btn btn-primary" id="add-first-class-btn">
+                    <button class="btn btn-primary mt-3" id="add-first-class-btn">
                         <i class="bi bi-plus-circle"></i> Criar Primeira Turma
                     </button>
                 </div>
@@ -1476,44 +1476,61 @@ function renderClassesList() {
         const students = getStudentsByClass(cls.id);
         const stats = getClassStats(cls.id);
         
+        // Formata os dias da semana
+        const daysDisplay = cls.days.map(day => 
+            `<span class="day-badge">${WEEK_DAYS[day]?.substring(0, 3)}</span>`
+        ).join('');
+        
         return `
-            <div class="col-lg-4 col-md-6">
+            <div class="col-lg-6 col-xl-4">
                 <div class="card class-card" data-class-id="${cls.id}">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start mb-3">
-                            <div>
-                                <h5 class="card-title mb-1">
-                                    <span class="class-color-badge" style="background-color: ${cls.color}"></span>
-                                    ${cls.name}
-                                </h5>
-                                <p class="text-muted mb-0">
-                                    ${cls.days.map(day => WEEK_DAYS[day]).join(', ')} às ${cls.time}
-                                </p>
+                            <div class="d-flex align-items-center">
+                                <span class="class-color-badge" style="background-color: ${cls.color}"></span>
+                                <h5 class="card-title mb-0">${cls.name}</h5>
                             </div>
-                            <span class="badge bg-primary">${students.length} alunos</span>
+                            <span class="badge bg-primary">${students.length} aluno${students.length !== 1 ? 's' : ''}</span>
                         </div>
                         
                         <div class="mb-3">
-                            <small class="text-muted">Progresso</small>
-                            <div class="progress" style="height: 6px;">
-                                <div class="progress-bar" style="width: ${stats.attendanceRate}%"></div>
+                            <p class="text-muted mb-2">
+                                <i class="bi bi-calendar-week"></i>
+                                ${cls.days.map(day => WEEK_DAYS[day]).join(', ')} às ${cls.time}
+                            </p>
+                            <div class="days-display">
+                                ${daysDisplay}
                             </div>
                         </div>
                         
-                        <div class="row">
-                            <div class="col-6">
-                                <small class="text-muted d-block">Média F.A.L.E</small>
-                                <strong>${stats.averageFale.toFixed(1)}</strong>
+                        <div class="mb-3">
+                            <small class="text-muted d-block mb-2">Progresso da turma</small>
+                            <div class="progress">
+                                <div class="progress-bar" 
+                                     style="width: ${stats.attendanceRate}%"
+                                     title="Frequência: ${stats.attendanceRate.toFixed(0)}%">
+                                </div>
                             </div>
-                            <div class="col-6 text-end">
-                                <small class="text-muted d-block">Frequência</small>
-                                <strong>${Math.round(stats.attendanceRate)}%</strong>
+                        </div>
+                        
+                        <div class="stats-display">
+                            <div class="stat-item">
+                                <span class="stat-value">${stats.averageFale.toFixed(1)}</span>
+                                <span class="stat-label">Média F.A.L.E</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value">${Math.round(stats.attendanceRate)}%</span>
+                                <span class="stat-label">Frequência</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value">${students.length}</span>
+                                <span class="stat-label">Alunos</span>
                             </div>
                         </div>
                         
                         <div class="mt-3 d-flex gap-2">
                             <button class="btn btn-sm btn-outline-primary view-class-btn" data-id="${cls.id}">
-                                <i class="bi bi-eye"></i> Ver
+                                <i class="bi bi-eye"></i> Detalhes
                             </button>
                             <button class="btn btn-sm btn-outline-warning edit-class-btn" data-id="${cls.id}">
                                 <i class="bi bi-pencil"></i> Editar
@@ -1529,6 +1546,15 @@ function renderClassesList() {
     }).join('');
     
     // Adiciona event listeners aos botões
+    addClassCardEventListeners();
+}
+
+/**
+ * Adiciona event listeners aos botões dos cards de turma
+ */
+function addClassCardEventListeners() {
+    const container = document.getElementById('classes-list');
+    
     container.querySelectorAll('.view-class-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const classId = parseInt(e.target.closest('button').getAttribute('data-id'));
@@ -1549,6 +1575,20 @@ function renderClassesList() {
             deleteClassWithConfirmation(classId);
         });
     });
+}
+
+/**
+ * Exclui turma com confirmação
+ */
+function deleteClassWithConfirmation(classId) {
+    const cls = getClassById(classId);
+    if (!cls) return;
+    
+    if (confirm(`Tem certeza que deseja excluir a turma "${cls.name}"?\n\nEsta ação também excluirá todos os alunos desta turma e não pode ser desfeita.`)) {
+        deleteClass(classId);
+        showNotification(`Turma "${cls.name}" excluída com sucesso!`, 'success');
+        updateUI();
+    }
 }
 
 /**
