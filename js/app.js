@@ -7,248 +7,39 @@ import * as githubService from './modules/github-service.js';
 import * as uiManager from './modules/ui-manager.js';
 import * as planningManager from './modules/planning-manager.js';
 
+// Variáveis globais
+let appData;
+
 // =============================================
-// FUNÇÕES GLOBAIS (para onclick no HTML)
+// FUNÇÕES GLOBAIS (para acesso no HTML)
 // =============================================
 
 // Interface
 window.showSection = uiManager.showSection;
-window.toggleSidebar = uiManager.toggleSidebar;
-window.showLoading = uiManager.showLoading;
-window.showGitHubStatus = uiManager.showGitHubStatus;
-
-// GitHub
-window.saveToGitHub = async function() {
-    uiManager.showLoading(true);
-    const result = await githubService.saveToGitHub();
-    uiManager.showLoading(false);
-    uiManager.showGitHubStatus(result.message, result.success ? 'success' : 'error');
-};
-
-window.loadFromGitHub = async function() {
-    uiManager.showLoading(true);
-    const result = await githubService.loadFromGitHub();
-    uiManager.showLoading(false);
-    
-    if (result.success && result.data) {
-        dataManager.setAppData(result.data);
-        dataManager.saveData();
-        uiManager.updateUI();
-    }
-    uiManager.showGitHubStatus(result.message, result.success ? 'success' : 'error');
-};
-
-window.saveGitHubConfig = function() {
-    const config = {
-        username: $('#githubUsername').val(),
-        repo: $('#githubRepo').val(),
-        token: $('#githubToken').val(),
-        branch: 'main'
-    };
-    
-    dataManager.saveGitHubConfig(config);
-    uiManager.showGitHubStatus('Configuração do GitHub salva!', 'success');
-};
+window.toggleSidebar = toggleSidebar;
+window.showAlert = uiManager.showAlert;
 
 // Turmas
-window.showAddClassModal = function(classId = null) {
-    // Implementação simplificada - manteremos do arquivo original
-    $('#className').val('');
-    $('.form-check-input').prop('checked', false);
-    $('#classTime').val('16:00');
-    selectColor('#3498db');
-    $('#editClassId').val('');
-    
-    if (classId) {
-        const cls = dataManager.getAppData().classes.find(c => c.id == classId);
-        if (cls) {
-            $('#classModalTitle').text('Editar Turma');
-            $('#editClassId').val(classId);
-            $('#className').val(cls.name);
-            $('#classTime').val(cls.time);
-            selectColor(cls.color);
-            
-            cls.days.forEach(day => {
-                $(`#day${capitalizeFirstLetter(day)}`).prop('checked', true);
-            });
-        }
-    } else {
-        $('#classModalTitle').text('Nova Turma');
-    }
-    
-    new bootstrap.Modal('#addClassModal').show();
-};
-
-window.saveClass = function() {
-    const classId = $('#editClassId').val();
-    const className = $('#className').val().trim();
-    if (!className) {
-        alert('Digite o nome da turma');
-        return;
-    }
-    
-    const selectedDays = [];
-    $('input[type="checkbox"]:checked').each(function() {
-        selectedDays.push($(this).val());
-    });
-    
-    if (selectedDays.length === 0) {
-        alert('Selecione pelo menos um dia da semana');
-        return;
-    }
-    
-    const classData = {
-        name: className,
-        days: selectedDays,
-        time: $('#classTime').val(),
-        color: $('#classColor').val()
-    };
-    
-    const appData = dataManager.getAppData();
-    
-    if (classId) {
-        const index = appData.classes.findIndex(c => c.id == classId);
-        if (index !== -1) {
-            appData.classes[index] = { ...appData.classes[index], ...classData };
-        }
-    } else {
-        const newClass = {
-            id: Date.now(),
-            ...classData
-        };
-        appData.classes.push(newClass);
-    }
-    
-    dataManager.saveData();
-    bootstrap.Modal.getInstance('#addClassModal').hide();
-    uiManager.showGitHubStatus('Turma salva com sucesso!', 'success');
-};
-
-window.deleteClass = function(classId) {
-    if (confirm('Tem certeza que deseja excluir esta turma? Todos os alunos dela também serão excluídos!')) {
-        const appData = dataManager.getAppData();
-        appData.classes = appData.classes.filter(c => c.id != classId);
-        appData.students = appData.students.filter(s => s.classId != classId);
-        dataManager.saveData();
-        uiManager.showGitHubStatus('Turma excluída com sucesso!', 'success');
-    }
-};
+window.showAddClassModal = showAddClassModal;
+window.saveClass = saveClass;
+window.deleteClass = deleteClassData;
+window.showClassDetails = showClassDetails;
 
 // Alunos
-window.showAddStudentModal = function(studentId = null) {
-    $('#studentName').val('');
-    $('#lastLesson').val('');
-    $('#nextLesson').val('');
-    $('#scoreF, #scoreA, #scoreL, #scoreE').val('B');
-    $('#editStudentId').val('');
-    
-    if (studentId) {
-        const student = dataManager.getAppData().students.find(s => s.id == studentId);
-        if (student) {
-            $('#studentModalTitle').text('Editar Aluno');
-            $('#editStudentId').val(studentId);
-            $('#studentName').val(student.name);
-            $('#lastLesson').val(student.lastLesson);
-            $('#nextLesson').val(student.nextLesson);
-            $('#scoreF').val(student.fale.F);
-            $('#scoreA').val(student.fale.A);
-            $('#scoreL').val(student.fale.L);
-            $('#scoreE').val(student.fale.E);
-        }
-    } else {
-        $('#studentModalTitle').text('Novo Aluno');
-    }
-    
-    updateCalculatedAverage();
-    uiManager.updateClassSelects();
-    new bootstrap.Modal('#addStudentModal').show();
-};
+window.showAddStudentModal = showAddStudentModal;
+window.saveStudent = saveStudent;
+window.deleteStudent = deleteStudentData;
 
-window.saveStudent = function() {
-    const studentId = $('#editStudentId').val();
-    const name = $('#studentName').val().trim();
-    const classId = parseInt($('#studentClass').val());
-    const lastLesson = $('#lastLesson').val().trim();
-    const nextLesson = $('#nextLesson').val().trim();
-    
-    if (!name || !classId || !lastLesson || !nextLesson) {
-        alert('Preencha todos os campos obrigatórios');
-        return;
-    }
-    
-    const lessonRegex = /^(RW\d*|\d+)$/i;
-    if (!lessonRegex.test(lastLesson) || !lessonRegex.test(nextLesson)) {
-        alert('Formato de lição inválido. Use números (ex: 170) ou RW seguido de número (ex: RW1)');
-        return;
-    }
-    
-    const studentData = {
-        name: name,
-        classId: classId,
-        lastLesson: lastLesson,
-        nextLesson: nextLesson,
-        fale: {
-            F: $('#scoreF').val(),
-            A: $('#scoreA').val(),
-            L: $('#scoreL').val(),
-            E: $('#scoreE').val()
-        }
-    };
-    
-    const scores = { 'O': 4, 'MB': 3, 'B': 2, 'R': 1 };
-    const average = (
-        scores[studentData.fale.F] +
-        scores[studentData.fale.A] +
-        scores[studentData.fale.L] +
-        scores[studentData.fale.E]
-    ) / 4;
-    studentData.average = average;
-    studentData.nextLessonValue = utils.getLessonValue(nextLesson);
-    studentData.lastLessonValue = utils.getLessonValue(lastLesson);
-    
-    const appData = dataManager.getAppData();
-    
-    if (studentId) {
-        const index = appData.students.findIndex(s => s.id == studentId);
-        if (index !== -1) {
-            const existing = appData.students[index];
-            appData.students[index] = { 
-                ...existing,
-                ...studentData 
-            };
-        }
-    } else {
-        const newStudent = {
-            id: Date.now(),
-            ...studentData,
-            attendance: [],
-            peerHistory: []
-        };
-        appData.students.push(newStudent);
-    }
-    
-    dataManager.saveData();
-    bootstrap.Modal.getInstance('#addStudentModal').hide();
-    uiManager.showGitHubStatus('Aluno salvo com sucesso!', 'success');
-};
+// Planejamento e presenças
+window.generateAttendanceOrder = generateAttendanceOrder;
+window.confirmPeerWork = confirmPeerWork;
+window.openAttendanceModal = openAttendanceModal;
+window.selectColor = selectColor;
 
-window.deleteStudent = function(studentId) {
-    if (confirm('Tem certeza que deseja excluir este aluno?')) {
-        const appData = dataManager.getAppData();
-        appData.students = appData.students.filter(s => s.id != studentId);
-        dataManager.saveData();
-        uiManager.showGitHubStatus('Aluno excluído com sucesso!', 'success');
-    }
-};
-
-// Planejamento
-window.planLesson = planningManager.planLesson;
-window.generateAttendanceOrder = planningManager.generateAttendanceOrder;
-window.markAttendance = planningManager.markAttendance;
-window.confirmPeerWork = planningManager.confirmPeerWork;
-window.generateReport = planningManager.generateReport;
-
-// Exportação/Importação
+// GitHub e backup
+window.saveToGitHub = saveToGitHub;
+window.loadFromGitHub = loadFromGitHub;
+window.saveGitHubConfig = saveGitHubConfig;
 window.exportData = exportData;
 window.importData = importData;
 
@@ -256,22 +47,56 @@ window.importData = importData;
 // FUNÇÕES AUXILIARES LOCAIS
 // =============================================
 
+/**
+ * Alterna a sidebar
+ */
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('mobileSidebarOverlay');
+    
+    if (sidebar && overlay) {
+        sidebar.classList.toggle('active');
+        overlay.classList.toggle('active');
+        
+        if (sidebar.classList.contains('active')) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'auto';
+        }
+    }
+}
+
+/**
+ * Capitaliza a primeira letra
+ */
 function capitalizeFirstLetter(string) {
     return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
+/**
+ * Seleciona uma cor
+ */
 function selectColor(color) {
-    $('.color-picker').removeClass('selected');
-    $(`.color-picker[style*="background:${color}"]`).addClass('selected');
-    $('#classColor').val(color);
+    const colorPickers = document.querySelectorAll('.color-picker');
+    colorPickers.forEach(picker => {
+        picker.classList.remove('selected');
+        if (picker.getAttribute('data-color') === color || 
+            picker.style.backgroundColor === color) {
+            picker.classList.add('selected');
+        }
+    });
+    document.getElementById('classColor').value = color;
 }
 
+/**
+ * Atualiza a média calculada
+ */
 function updateCalculatedAverage() {
     const scores = { 'O': 4, 'MB': 3, 'B': 2, 'R': 1 };
-    const f = scores[$('#scoreF').val()];
-    const a = scores[$('#scoreA').val()];
-    const l = scores[$('#scoreL').val()];
-    const e = scores[$('#scoreE').val()];
+    const f = scores[document.getElementById('scoreF').value];
+    const a = scores[document.getElementById('scoreA').value];
+    const l = scores[document.getElementById('scoreL').value];
+    const e = scores[document.getElementById('scoreE').value];
     const average = (f + a + l + e) / 4;
     
     let text;
@@ -280,19 +105,16 @@ function updateCalculatedAverage() {
     else if (average >= 1.5) text = 'Bom';
     else text = 'Regular';
     
-    $('#calculatedAverage').text(`${text} (${average.toFixed(1)})`);
+    document.getElementById('calculatedAverage').textContent = `${text} (${average.toFixed(1)})`;
 }
 
+/**
+ * Exporta dados
+ */
 function exportData() {
-    const appData = dataManager.getAppData();
-    const data = {
-        ...appData,
-        exportedAt: new Date().toISOString(),
-        version: '1.0'
-    };
-    
+    const data = dataManager.exportData();
     const dataStr = JSON.stringify(data, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
     
     const exportFileDefaultName = `english-planner-backup-${new Date().toISOString().split('T')[0]}.json`;
     
@@ -303,9 +125,12 @@ function exportData() {
     linkElement.click();
     document.body.removeChild(linkElement);
     
-    uiManager.showGitHubStatus('Backup exportado com sucesso!', 'success');
+    uiManager.showAlert('Backup exportado com sucesso!', 'success');
 }
 
+/**
+ * Importa dados
+ */
 function importData() {
     const input = document.createElement('input');
     input.type = 'file';
@@ -323,10 +148,10 @@ function importData() {
                     data.students && Array.isArray(data.students)) {
                     
                     if (confirm('Importar dados? Isso substituirá todos os dados atuais.')) {
-                        dataManager.setAppData(data);
-                        dataManager.saveData();
-                        uiManager.updateUI();
-                        uiManager.showGitHubStatus('Dados importados com sucesso!', 'success');
+                        dataManager.importData(data);
+                        appData = dataManager.getAppData();
+                        uiManager.showAlert('Dados importados com sucesso!', 'success');
+                        location.reload(); // Recarregar para atualizar tudo
                     }
                 } else {
                     alert('Arquivo inválido. O arquivo não contém a estrutura correta.');
@@ -342,90 +167,729 @@ function importData() {
     input.click();
 }
 
+/**
+ * Atualiza a data atual
+ */
+function updateCurrentDate() {
+    const now = new Date();
+    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    const dateElement = document.getElementById('currentDate');
+    if (dateElement) {
+        dateElement.textContent = now.toLocaleDateString('pt-BR', options);
+    }
+}
+
+// =============================================
+// FUNÇÕES DE TURMAS
+// =============================================
+
+/**
+ * Mostra modal de adicionar/editar turma
+ */
+function showAddClassModal(classId = null) {
+    const modal = new bootstrap.Modal(document.getElementById('addClassModal'));
+    const modalTitle = document.getElementById('classModalTitle');
+    const editClassId = document.getElementById('editClassId');
+    const className = document.getElementById('className');
+    const classTime = document.getElementById('classTime');
+    const classColor = document.getElementById('classColor');
+    
+    // Resetar checkboxes
+    ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'].forEach(day => {
+        const checkbox = document.getElementById(`day${capitalizeFirstLetter(day)}`);
+        if (checkbox) checkbox.checked = false;
+    });
+    
+    if (classId) {
+        // Editar turma existente
+        const cls = appData.classes.find(c => c.id == classId);
+        if (cls) {
+            modalTitle.textContent = 'Editar Turma';
+            editClassId.value = cls.id;
+            className.value = cls.name;
+            classTime.value = cls.time;
+            classColor.value = cls.color;
+            selectColor(cls.color);
+            
+            cls.days.forEach(day => {
+                const checkbox = document.getElementById(`day${capitalizeFirstLetter(day)}`);
+                if (checkbox) checkbox.checked = true;
+            });
+        }
+    } else {
+        // Nova turma
+        modalTitle.textContent = 'Nova Turma';
+        editClassId.value = '';
+        className.value = '';
+        classTime.value = '16:00';
+        classColor.value = '#3498db';
+        selectColor('#3498db');
+    }
+    
+    modal.show();
+}
+
+/**
+ * Salva turma
+ */
+function saveClass() {
+    const editClassId = document.getElementById('editClassId').value;
+    const className = document.getElementById('className').value.trim();
+    const classTime = document.getElementById('classTime').value;
+    const classColor = document.getElementById('classColor').value;
+    
+    // Coletar dias selecionados
+    const days = [];
+    ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'].forEach(day => {
+        const checkbox = document.getElementById(`day${capitalizeFirstLetter(day)}`);
+        if (checkbox && checkbox.checked) {
+            days.push(day);
+        }
+    });
+    
+    if (!className) {
+        uiManager.showAlert('Digite o nome da turma', 'warning');
+        return;
+    }
+    
+    if (days.length === 0) {
+        uiManager.showAlert('Selecione pelo menos um dia da semana', 'warning');
+        return;
+    }
+    
+    if (!classTime) {
+        uiManager.showAlert('Selecione um horário', 'warning');
+        return;
+    }
+    
+    const classData = {
+        name: className,
+        days: days,
+        time: classTime,
+        color: classColor
+    };
+    
+    if (editClassId) {
+        // Atualizar turma existente
+        dataManager.updateClass(parseInt(editClassId), classData);
+        uiManager.showAlert('Turma atualizada com sucesso!', 'success');
+    } else {
+        // Criar nova turma
+        dataManager.addClass(classData);
+        uiManager.showAlert('Turma criada com sucesso!', 'success');
+    }
+    
+    appData = dataManager.getAppData();
+    uiManager.updateUI();
+    
+    const modal = bootstrap.Modal.getInstance(document.getElementById('addClassModal'));
+    modal.hide();
+}
+
+/**
+ * Exclui turma
+ */
+function deleteClassData(classId) {
+    const className = appData.classes.find(c => c.id == classId)?.name;
+    const studentsInClass = appData.students.filter(s => s.classId == classId).length;
+    
+    let message = `Tem certeza que deseja excluir a turma "${className}"?`;
+    if (studentsInClass > 0) {
+        message += `\n\nATENÇÃO: Esta turma tem ${studentsInClass} aluno(s) que também serão excluídos!`;
+    }
+    
+    if (confirm(message)) {
+        // Confirmar novamente se houver alunos
+        if (studentsInClass > 0) {
+            if (!confirm('CONFIRMAÇÃO FINAL: Todos os alunos desta turma serão perdidos. Continuar?')) {
+                return;
+            }
+        }
+        
+        dataManager.deleteClass(classId);
+        uiManager.showAlert('Turma excluída com sucesso!', 'success');
+        appData = dataManager.getAppData();
+        uiManager.updateUI();
+    }
+}
+
+/**
+ * Mostra detalhes da turma
+ */
+function showClassDetails(classId) {
+    const modal = new bootstrap.Modal(document.getElementById('classDetailsModal'));
+    const classObj = appData.classes.find(c => c.id == classId);
+    const students = appData.students.filter(s => s.classId == classId);
+    
+    if (!classObj) return;
+    
+    document.getElementById('classDetailsTitle').textContent = classObj.name;
+    document.getElementById('classDetailsName').textContent = classObj.name;
+    
+    const classActions = document.getElementById('classActions');
+    classActions.innerHTML = '';
+    
+    // Botão de presenças
+    const attendanceBtn = document.createElement('button');
+    attendanceBtn.className = 'btn btn-info btn-sm';
+    attendanceBtn.innerHTML = '<i class="bi bi-calendar-check"></i> Presenças';
+    attendanceBtn.onclick = () => openAttendanceModal(classId);
+    classActions.appendChild(attendanceBtn);
+    
+    // Botão de planejamento
+    const planningBtn = document.createElement('button');
+    planningBtn.className = 'btn btn-primary btn-sm ms-2';
+    planningBtn.innerHTML = '<i class="bi bi-journal-check"></i> Planejar';
+    planningBtn.onclick = () => {
+        uiManager.showSection('lessons');
+        document.getElementById('selectClassForPlanning').value = classId;
+        generateAttendanceOrder();
+        modal.hide();
+    };
+    classActions.appendChild(planningBtn);
+    
+    // Listar alunos
+    const studentsList = document.getElementById('classStudentsList');
+    if (students.length === 0) {
+        studentsList.innerHTML = '<p class="text-muted">Nenhum aluno nesta turma</p>';
+    } else {
+        let html = '<div class="list-group">';
+        students.forEach(student => {
+            const lessonValue = utils.getLessonValue(student.nextLesson);
+            const isReview = lessonValue >= 1000;
+            const isEven = !isReview && (lessonValue % 2 === 0);
+            const lessonType = isReview ? 'RW' : (isEven ? 'PAR' : 'ÍMPAR');
+            
+            html += `
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">${student.name}</h6>
+                            <p class="mb-1 small text-muted">
+                                Lição ${utils.getLessonDisplay(student.nextLesson)} (${lessonType})
+                            </p>
+                            <div>
+                                <span class="fale-badge fale-${student.fale.F}" title="Fluência">F</span>
+                                <span class="fale-badge fale-${student.fale.A}" title="Pronúncia">A</span>
+                                <span class="fale-badge fale-${student.fale.L}" title="Compreensão">L</span>
+                                <span class="fale-badge fale-${student.fale.E}" title="Expressão">E</span>
+                            </div>
+                        </div>
+                        <div>
+                            <span class="badge bg-light text-dark">Média: ${student.average.toFixed(1)}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        studentsList.innerHTML = html;
+    }
+    
+    modal.show();
+}
+
+// =============================================
+// FUNÇÕES DE ALUNOS
+// =============================================
+
+/**
+ * Mostra modal de adicionar/editar aluno
+ */
+function showAddStudentModal(studentId = null) {
+    const modal = new bootstrap.Modal(document.getElementById('addStudentModal'));
+    const modalTitle = document.getElementById('studentModalTitle');
+    const editStudentId = document.getElementById('editStudentId');
+    const studentName = document.getElementById('studentName');
+    const studentClass = document.getElementById('studentClass');
+    const lastLesson = document.getElementById('lastLesson');
+    const nextLesson = document.getElementById('nextLesson');
+    const scoreF = document.getElementById('scoreF');
+    const scoreA = document.getElementById('scoreA');
+    const scoreL = document.getElementById('scoreL');
+    const scoreE = document.getElementById('scoreE');
+    
+    // Atualizar select de turmas
+    uiManager.updateClassSelects();
+    
+    if (studentId) {
+        // Editar aluno existente
+        const student = appData.students.find(s => s.id == studentId);
+        if (student) {
+            modalTitle.textContent = 'Editar Aluno';
+            editStudentId.value = student.id;
+            studentName.value = student.name;
+            studentClass.value = student.classId;
+            lastLesson.value = student.lastLesson;
+            nextLesson.value = student.nextLesson;
+            scoreF.value = student.fale.F;
+            scoreA.value = student.fale.A;
+            scoreL.value = student.fale.L;
+            scoreE.value = student.fale.E;
+            updateCalculatedAverage();
+        }
+    } else {
+        // Novo aluno
+        modalTitle.textContent = 'Novo Aluno';
+        editStudentId.value = '';
+        studentName.value = '';
+        studentClass.value = '';
+        lastLesson.value = '';
+        nextLesson.value = '';
+        scoreF.value = 'B';
+        scoreA.value = 'B';
+        scoreL.value = 'B';
+        scoreE.value = 'B';
+        updateCalculatedAverage();
+    }
+    
+    modal.show();
+}
+
+/**
+ * Salva aluno
+ */
+function saveStudent() {
+    const editStudentId = document.getElementById('editStudentId').value;
+    const studentName = document.getElementById('studentName').value.trim();
+    const studentClass = document.getElementById('studentClass').value;
+    const lastLesson = document.getElementById('lastLesson').value.trim();
+    const nextLesson = document.getElementById('nextLesson').value.trim();
+    const scoreF = document.getElementById('scoreF').value;
+    const scoreA = document.getElementById('scoreA').value;
+    const scoreL = document.getElementById('scoreL').value;
+    const scoreE = document.getElementById('scoreE').value;
+    
+    if (!studentName || !studentClass || !nextLesson) {
+        uiManager.showAlert('Preencha todos os campos obrigatórios!', 'warning');
+        return;
+    }
+    
+    // Validar formato da lição
+    const lessonRegex = /^(RW\d*|\d+)$/i;
+    if (lastLesson && !lessonRegex.test(lastLesson)) {
+        uiManager.showAlert('Formato da última lição inválido. Use números (ex: 170) ou RW seguido de número (ex: RW1)', 'warning');
+        return;
+    }
+    if (!lessonRegex.test(nextLesson)) {
+        uiManager.showAlert('Formato da próxima lição inválido. Use números (ex: 170) ou RW seguido de número (ex: RW1)', 'warning');
+        return;
+    }
+    
+    const studentData = {
+        name: studentName,
+        classId: parseInt(studentClass),
+        lastLesson: lastLesson || nextLesson,
+        nextLesson: nextLesson,
+        fale: {
+            F: scoreF,
+            A: scoreA,
+            L: scoreL,
+            E: scoreE
+        },
+        average: utils.calculateAverage(scoreF, scoreA, scoreL, scoreE),
+        nextLessonValue: utils.getLessonValue(nextLesson),
+        lastLessonValue: utils.getLessonValue(lastLesson || nextLesson),
+        attendance: [],
+        peerHistory: []
+    };
+    
+    if (editStudentId) {
+        // Atualizar aluno existente
+        dataManager.updateStudent(parseInt(editStudentId), studentData);
+        uiManager.showAlert('Aluno atualizado com sucesso!', 'success');
+    } else {
+        // Criar novo aluno
+        dataManager.addStudent(studentData);
+        uiManager.showAlert('Aluno criado com sucesso!', 'success');
+    }
+    
+    appData = dataManager.getAppData();
+    uiManager.updateUI();
+    
+    const modal = bootstrap.Modal.getInstance(document.getElementById('addStudentModal'));
+    modal.hide();
+}
+
+/**
+ * Exclui aluno
+ */
+function deleteStudentData(studentId) {
+    const student = appData.students.find(s => s.id == studentId);
+    if (!student) return;
+    
+    if (confirm(`Tem certeza que deseja excluir o aluno "${student.name}"?`)) {
+        if (confirm('CONFIRMAÇÃO FINAL: Esta ação não pode ser desfeita. Continuar?')) {
+            dataManager.deleteStudent(studentId);
+            uiManager.showAlert('Aluno excluído com sucesso!', 'success');
+            appData = dataManager.getAppData();
+            uiManager.updateUI();
+        }
+    }
+}
+
+// =============================================
+// FUNÇÕES DE PLANEJAMENTO E PRESENÇAS
+// =============================================
+
+/**
+ * Gera ordem de atendimento
+ */
+function generateAttendanceOrder() {
+    const classId = document.getElementById('selectClassForPlanning')?.value;
+    if (!classId) {
+        uiManager.showAlert('Selecione uma turma primeiro!', 'warning');
+        return;
+    }
+    
+    const orderContainer = document.getElementById('attendanceOrder');
+    const pairsContainer = document.getElementById('peerWorkPairs');
+    
+    if (!orderContainer || !pairsContainer) return;
+    
+    const students = appData.students.filter(s => s.classId == classId);
+    if (students.length === 0) {
+        orderContainer.innerHTML = '<p class="text-muted">Nenhum aluno nesta turma</p>';
+        pairsContainer.innerHTML = '<p class="text-muted">Nenhum par sugerido</p>';
+        return;
+    }
+    
+    // Gerar ordem
+    const orderedStudents = planningManager.generateAttendanceOrder(students);
+    
+    // Exibir ordem
+    let orderHtml = '<div class="list-group">';
+    orderedStudents.forEach((student, index) => {
+        const lessonValue = utils.getLessonValue(student.nextLesson);
+        const isReview = lessonValue >= 1000;
+        const isEven = !isReview && (lessonValue % 2 === 0);
+        const badgeClass = isReview ? 'bg-purple' : (isEven ? 'bg-success' : 'bg-pink');
+        
+        orderHtml += `
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="badge ${badgeClass} me-2">${index + 1}</span>
+                    ${student.name}
+                </div>
+                <div>
+                    <span class="badge bg-light text-dark">Lição ${utils.getLessonDisplay(student.nextLesson)}</span>
+                </div>
+            </div>
+        `;
+    });
+    orderHtml += '</div>';
+    orderContainer.innerHTML = orderHtml;
+    
+    // Gerar sugestões de pares
+    const pairs = planningManager.generatePeerWorkSuggestions(students);
+    
+    // Exibir pares
+    let pairsHtml = '<div class="list-group">';
+    pairs.forEach(pair => {
+        pairsHtml += `
+            <div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div>${pair.student1.name}</div>
+                        <div>${pair.student2.name}</div>
+                    </div>
+                    <div>
+                        <button class="btn btn-sm btn-success" onclick="confirmPeerWork(${pair.student1.id}, ${pair.student2.id})">
+                            <i class="bi bi-check"></i> Confirmar
+                        </button>
+                    </div>
+                </div>
+                <div class="small text-muted mt-1">
+                    Diferença: ${pair.difference} lições
+                </div>
+            </div>
+        `;
+    });
+    pairsHtml += '</div>';
+    pairsContainer.innerHTML = pairsHtml;
+}
+
+/**
+ * Abre modal de presenças
+ */
+function openAttendanceModal(classId) {
+    uiManager.openAttendanceModal(classId);
+}
+
+/**
+ * Confirma peer work
+ */
+function confirmPeerWork(student1Id, student2Id) {
+    if (confirm('Confirmar este peer work? Isso será salvo no histórico dos alunos.')) {
+        if (dataManager.confirmPeerWork(student1Id, student2Id)) {
+            uiManager.showAlert('Peer work confirmado e salvo no histórico!', 'success');
+            // Atualizar a interface
+            generateAttendanceOrder();
+        }
+    }
+}
+
+// =============================================
+// FUNÇÕES DO GITHUB
+// =============================================
+
+/**
+ * Salva no GitHub
+ */
+async function saveToGitHub() {
+    uiManager.showLoading(true);
+    const result = await githubService.saveToGitHub(appData, 'Backup automático - ' + new Date().toLocaleString());
+    uiManager.showLoading(false);
+    
+    if (result.success) {
+        uiManager.showAlert('Backup salvo com sucesso no GitHub!', 'success');
+    } else {
+        uiManager.showAlert(`Erro ao salvar no GitHub: ${result.error}`, 'danger');
+    }
+}
+
+/**
+ * Carrega do GitHub
+ */
+async function loadFromGitHub() {
+    if (!confirm('Isso substituirá todos os dados locais. Continuar?')) {
+        return;
+    }
+    
+    uiManager.showLoading(true);
+    const result = await githubService.loadFromGitHub();
+    uiManager.showLoading(false);
+    
+    if (result.success) {
+        uiManager.showAlert('Dados carregados com sucesso do GitHub!', 'success');
+        dataManager.importData(result.data);
+        appData = dataManager.getAppData();
+        uiManager.updateUI();
+        location.reload(); // Recarregar para atualizar tudo
+    } else {
+        uiManager.showAlert(`Erro ao carregar do GitHub: ${result.error}`, 'danger');
+    }
+}
+
+/**
+ * Salva configuração do GitHub
+ */
+function saveGitHubConfig() {
+    const username = document.getElementById('githubUsername').value;
+    const repo = document.getElementById('githubRepo').value;
+    const token = document.getElementById('githubToken').value;
+    
+    if (!username || !repo || !token) {
+        uiManager.showAlert('Preencha todos os campos do GitHub!', 'warning');
+        return;
+    }
+    
+    githubService.saveGitHubConfig({ username, repo, token });
+    uiManager.showAlert('Configuração do GitHub salva com sucesso!', 'success');
+}
+
 // =============================================
 // INICIALIZAÇÃO
 // =============================================
 
-$(document).ready(function() {
-    // Carregar configuração do GitHub
-    const githubConfig = dataManager.loadGitHubConfig();
-    $('#githubUsername').val(githubConfig.username);
-    $('#githubRepo').val(githubConfig.repo);
-    $('#githubToken').val(githubConfig.token);
-    
-    // Carregar dados
-    const loadedData = dataManager.loadData();
-    if (!loadedData) {
-        // Criar dados de exemplo se não existirem
-        dataManager.setAppData(dataManager.createSampleData());
-        dataManager.saveData();
+/**
+ * Configura todos os event listeners
+ */
+function setupEventListeners() {
+    // Sidebar toggle
+    const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
+    if (toggleSidebarBtn) {
+        toggleSidebarBtn.addEventListener('click', toggleSidebar);
     }
     
-    // Configurar data atual
-    uiManager.updateCurrentDate();
-    
-    // Configurar eventos
-    $('#scoreF, #scoreA, #scoreL, #scoreE').on('change', updateCalculatedAverage);
-    $('#searchStudent').on('input', uiManager.updateStudentsList);
-    $('#filterClass, #filterLesson').on('change', uiManager.updateStudentsList);
-    
-    // Auto-save
-    const appData = dataManager.getAppData();
-    if (appData.settings.autoSave) {
-        setInterval(() => {
-            dataManager.saveData();
-        }, 30000);
+    // Overlay do sidebar
+    const overlay = document.getElementById('mobileSidebarOverlay');
+    if (overlay) {
+        overlay.addEventListener('click', toggleSidebar);
     }
     
-    // Configurar data de planejamento para hoje
-    const today = new Date().toISOString().split('T')[0];
-    $('#planningDate').val(today);
-    
-    // Mostrar dashboard inicial
-    uiManager.showSection('dashboard');
-    uiManager.updateUI();
-    
-    // Carregar dados do GitHub se disponível
-    setTimeout(() => {
-        loadFromGitHub();
-    }, 1000);
-});
-
-// Adicione após as outras inicializações:
-
-// Inicializar modal de presenças
-setupAttendanceModal();
-
-// Adicionar menu de relatórios
-document.addEventListener('DOMContentLoaded', function() {
-    // Adicionar item no menu
-    const nav = document.querySelector('.navbar-nav');
-    if (nav) {
-        const reportItem = document.createElement('li');
-        reportItem.className = 'nav-item';
-        reportItem.innerHTML = `
-            <a class="nav-link" href="#" id="attendanceReportLink">
-                <i class="bi bi-clipboard-data"></i> Relatório Frequência
-            </a>
-        `;
-        nav.appendChild(reportItem);
-        
-        document.getElementById('attendanceReportLink').addEventListener('click', function(e) {
+    // Links do menu
+    document.querySelectorAll('.menu-link').forEach(link => {
+        link.addEventListener('click', function(e) {
             e.preventDefault();
-            showSection('attendance-report');
-            renderAttendanceReport();
+            const sectionId = this.getAttribute('data-section');
+            uiManager.showSection(sectionId);
+        });
+    });
+    
+    // Botão adicionar turma
+    const addClassBtn = document.getElementById('addClassBtn');
+    if (addClassBtn) {
+        addClassBtn.addEventListener('click', () => showAddClassModal());
+    }
+    
+    // Botão salvar turma
+    const saveClassBtn = document.getElementById('saveClassBtn');
+    if (saveClassBtn) {
+        saveClassBtn.addEventListener('click', saveClass);
+    }
+    
+    // Botão adicionar aluno
+    const addStudentBtn = document.getElementById('addStudentBtn');
+    if (addStudentBtn) {
+        addStudentBtn.addEventListener('click', () => showAddStudentModal());
+    }
+    
+    // Botão salvar aluno
+    const saveStudentBtn = document.getElementById('saveStudentBtn');
+    if (saveStudentBtn) {
+        saveStudentBtn.addEventListener('click', saveStudent);
+    }
+    
+    // Atualizar média quando notas mudam
+    ['scoreF', 'scoreA', 'scoreL', 'scoreE'].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('change', updateCalculatedAverage);
+        }
+    });
+    
+    // Botão gerar ordem
+    const generateOrderBtn = document.getElementById('generateOrderBtn');
+    if (generateOrderBtn) {
+        generateOrderBtn.addEventListener('click', generateAttendanceOrder);
+    }
+    
+    // Botão salvar no GitHub
+    const saveToGitHubBtn = document.getElementById('saveToGitHubBtn');
+    if (saveToGitHubBtn) {
+        saveToGitHubBtn.addEventListener('click', saveToGitHub);
+    }
+    
+    // Botão exportar dados
+    const exportDataBtn = document.getElementById('exportDataBtn');
+    if (exportDataBtn) {
+        exportDataBtn.addEventListener('click', exportData);
+    }
+    
+    const exportDataBtn2 = document.getElementById('exportDataBtn2');
+    if (exportDataBtn2) {
+        exportDataBtn2.addEventListener('click', exportData);
+    }
+    
+    // Botão importar dados
+    const importDataBtn = document.getElementById('importDataBtn');
+    if (importDataBtn) {
+        importDataBtn.addEventListener('click', importData);
+    }
+    
+    // Botão salvar configuração GitHub
+    const saveGitHubConfigBtn = document.getElementById('saveGitHubConfigBtn');
+    if (saveGitHubConfigBtn) {
+        saveGitHubConfigBtn.addEventListener('click', saveGitHubConfig);
+    }
+    
+    // Botão carregar do GitHub
+    const loadFromGitHubBtn = document.getElementById('loadFromGitHubBtn');
+    if (loadFromGitHubBtn) {
+        loadFromGitHubBtn.addEventListener('click', loadFromGitHub);
+    }
+    
+    // Busca de alunos
+    const searchStudent = document.getElementById('searchStudent');
+    if (searchStudent) {
+        searchStudent.addEventListener('input', () => uiManager.updateStudentsList());
+    }
+    
+    // Filtro de turma
+    const filterClass = document.getElementById('filterClass');
+    if (filterClass) {
+        filterClass.addEventListener('change', () => {
+            uiManager.updateStudentsList();
+            uiManager.updateLessonFilter();
         });
     }
-});
-
-// Adicionar seção de relatórios no main content
-const mainContent = document.getElementById('mainContent');
-if (mainContent) {
-    mainContent.innerHTML += `
-        <section id="attendance-report" class="content-section" style="display: none;">
-            <div class="container-fluid">
-                <div id="attendanceReportContainer"></div>
-            </div>
-        </section>
-    `;
+    
+    // Filtro de lições
+    const filterLesson = document.getElementById('filterLesson');
+    if (filterLesson) {
+        filterLesson.addEventListener('change', () => uiManager.updateStudentsList());
+    }
+    
+    // Seletores de cor
+    document.querySelectorAll('.color-picker').forEach(picker => {
+        picker.addEventListener('click', function() {
+            const color = this.getAttribute('data-color') || this.style.backgroundColor;
+            selectColor(color);
+        });
+    });
+    
+    // Configurar data de planejamento para hoje
+    const planningDate = document.getElementById('planningDate');
+    if (planningDate && !planningDate.value) {
+        planningDate.value = new Date().toISOString().split('T')[0];
+    }
+    
+    // Auto-save
+    const autoSave = document.getElementById('autoSave');
+    if (autoSave) {
+        autoSave.addEventListener('change', function() {
+            appData.settings = appData.settings || {};
+            appData.settings.autoSave = this.checked;
+            dataManager.saveData();
+        });
+    }
+    
+    // Tema
+    const themeSelect = document.getElementById('themeSelect');
+    if (themeSelect) {
+        themeSelect.addEventListener('change', function() {
+            document.body.setAttribute('data-theme', this.value);
+            appData.settings = appData.settings || {};
+            appData.settings.theme = this.value;
+            dataManager.saveData();
+        });
+        
+        // Aplicar tema salvo
+        if (appData.settings?.theme) {
+            themeSelect.value = appData.settings.theme;
+            document.body.setAttribute('data-theme', appData.settings.theme);
+        }
+    }
 }
+
+/**
+ * Inicializa a aplicação
+ */
+function initApp() {
+    console.log('Inicializando Interactive English Planner...');
+    
+    // Carregar dados
+    appData = dataManager.getAppData();
+    
+    // Inicializar UI
+    uiManager.initApp();
+    
+    // Configurar data atual
+    updateCurrentDate();
+    
+    // Configurar event listeners
+    setupEventListeners();
+    
+    // Atualizar UI
+    uiManager.updateUI();
+    
+    // Mostrar dashboard por padrão
+    uiManager.showSection('dashboard');
+    
+    console.log('Aplicação inicializada com sucesso!');
+}
+
+// Inicializar quando o DOM estiver carregado
+document.addEventListener('DOMContentLoaded', initApp);
+
+// Atualizar data a cada minuto
+setInterval(updateCurrentDate, 60000);
+
+// Auto-save a cada 30 segundos
+setInterval(() => {
+    const autoSave = document.getElementById('autoSave');
+    if (autoSave?.checked) {
+        dataManager.saveData();
+    }
+}, 30000);
