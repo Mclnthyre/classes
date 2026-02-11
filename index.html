@@ -3,32 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>English Planner Pro - Sistema de Gerenciamento de Aulas</title>
+    <title>English Planner Pro - Gestão de Aulas de Inglês</title>
     
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
     <!-- Nosso CSS -->
-    <link rel="stylesheet" href="css/style.css">
-    
-    <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📚</text></svg>">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Layout Principal -->
+    <!-- Overlay para mobile -->
+    <div class="sidebar-overlay"></div>
+
     <div class="container-fluid">
         <div class="row">
-            <!-- Sidebar -->
-            <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-dark sidebar collapse">
+            <!-- ========= SIDEBAR ========= -->
+            <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-dark sidebar">
                 <div class="position-sticky pt-3">
                     <div class="sidebar-header text-center mb-4">
                         <h2 class="text-white"><i class="bi bi-journal-bookmark"></i> English Planner</h2>
-                        <p class="text-muted">Sistema de Gestão de Aulas</p>
+                        <p class="text-muted">Gestão de Aulas</p>
                     </div>
-                    
                     <ul class="nav flex-column" id="main-menu">
                         <li class="nav-item">
                             <a class="nav-link active" href="#" data-section="dashboard">
@@ -47,7 +45,7 @@
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="#" data-section="planning">
-                                <i class="bi bi-calendar-week"></i> Planejamento
+                                <i class="bi bi-calendar-week"></i> Aulas
                             </a>
                         </li>
                         <li class="nav-item">
@@ -66,7 +64,6 @@
                             </a>
                         </li>
                     </ul>
-                    
                     <div class="sidebar-footer mt-4">
                         <div class="d-grid gap-2">
                             <button class="btn btn-outline-info" id="export-data">
@@ -80,20 +77,18 @@
                 </div>
             </nav>
 
-            <!-- Conteúdo Principal -->
+            <!-- ========= CONTEÚDO PRINCIPAL ========= -->
             <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-                <!-- Navbar Top -->
+                <!-- Navbar superior -->
                 <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom py-3">
                     <div class="container-fluid">
                         <button class="btn btn-dark d-md-none" type="button" id="sidebarToggle">
                             <i class="bi bi-list"></i>
                         </button>
-                        
                         <div class="navbar-brand">
                             <h4 id="current-section-title">Dashboard</h4>
                             <small class="text-muted" id="current-section-subtitle">Visão geral do sistema</small>
                         </div>
-                        
                         <div class="d-flex align-items-center">
                             <div class="form-check form-switch me-3">
                                 <input class="form-check-input" type="checkbox" id="darkModeSwitch">
@@ -106,12 +101,11 @@
                     </div>
                 </nav>
 
-                <!-- Seções de Conteúdo -->
+                <!-- ========= SEÇÕES DE CONTEÚDO ========= -->
                 <div id="content-sections">
-                    <!-- Dashboard -->
+                    <!-- DASHBOARD -->
                     <section id="dashboard-section" class="content-section">
                         <div class="row mt-4">
-                            <!-- Cards de Estatísticas -->
                             <div class="col-xl-3 col-md-6 mb-4">
                                 <div class="card border-left-primary h-100">
                                     <div class="card-body">
@@ -127,7 +121,6 @@
                                     </div>
                                 </div>
                             </div>
-                            
                             <div class="col-xl-3 col-md-6 mb-4">
                                 <div class="card border-left-success h-100">
                                     <div class="card-body">
@@ -143,7 +136,6 @@
                                     </div>
                                 </div>
                             </div>
-                            
                             <div class="col-xl-3 col-md-6 mb-4">
                                 <div class="card border-left-warning h-100">
                                     <div class="card-body">
@@ -159,7 +151,6 @@
                                     </div>
                                 </div>
                             </div>
-                            
                             <div class="col-xl-3 col-md-6 mb-4">
                                 <div class="card border-left-info h-100">
                                     <div class="card-body">
@@ -176,56 +167,27 @@
                                 </div>
                             </div>
                         </div>
-                        
-                        <!-- Gráficos e Listas -->
                         <div class="row">
                             <div class="col-lg-8">
                                 <div class="card mb-4">
                                     <div class="card-header">
                                         <h6 class="m-0 font-weight-bold">Progresso das Turmas</h6>
                                     </div>
-                                    <div class="card-body">
-                                        <div id="classes-progress" class="pt-3">
-                                            <!-- Conteúdo será gerado por JavaScript -->
-                                            <p class="text-muted">Nenhuma turma cadastrada ainda.</p>
-                                        </div>
-                                    </div>
+                                    <div class="card-body" id="classes-progress"></div>
                                 </div>
                             </div>
-                            
                             <div class="col-lg-4">
                                 <div class="card mb-4">
                                     <div class="card-header">
                                         <h6 class="m-0 font-weight-bold">Próximas Aulas</h6>
                                     </div>
-                                    <div class="card-body">
-                                        <div id="upcoming-classes">
-                                            <!-- Conteúdo será gerado por JavaScript -->
-                                            <p class="text-muted">Nenhuma aula agendada para hoje.</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Alunos com Baixa Frequência -->
-                        <div class="row">
-                            <div class="col-12">
-                                <div class="card">
-                                    <div class="card-header">
-                                        <h6 class="m-0 font-weight-bold">Alunos com Baixa Frequência</h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <div id="low-attendance-students">
-                                            <p class="text-muted">Todos os alunos estão com frequência regular.</p>
-                                        </div>
-                                    </div>
+                                    <div class="card-body" id="upcoming-classes"></div>
                                 </div>
                             </div>
                         </div>
                     </section>
 
-                    <!-- Turmas -->
+                    <!-- TURMAS -->
                     <section id="classes-section" class="content-section d-none">
                         <div class="d-flex justify-content-between align-items-center mt-4 mb-3">
                             <h2>Gerenciamento de Turmas</h2>
@@ -233,8 +195,6 @@
                                 <i class="bi bi-plus-circle"></i> Nova Turma
                             </button>
                         </div>
-                        
-                        <!-- Filtros -->
                         <div class="row mb-4">
                             <div class="col-md-4">
                                 <input type="text" class="form-control" id="class-search" placeholder="Buscar turma...">
@@ -251,17 +211,10 @@
                                 </select>
                             </div>
                         </div>
-                        
-                        <!-- Lista de Turmas -->
-                        <div class="row" id="classes-list">
-                            <!-- As turmas serão inseridas aqui por JavaScript -->
-                            <div class="col-12">
-                                <p class="text-muted">Nenhuma turma cadastrada. Clique em "Nova Turma" para começar.</p>
-                            </div>
-                        </div>
+                        <div class="row" id="classes-list"></div>
                     </section>
 
-                    <!-- Alunos -->
+                    <!-- ALUNOS -->
                     <section id="students-section" class="content-section d-none">
                         <div class="d-flex justify-content-between align-items-center mt-4 mb-3">
                             <h2>Gerenciamento de Alunos</h2>
@@ -269,8 +222,6 @@
                                 <i class="bi bi-plus-circle"></i> Novo Aluno
                             </button>
                         </div>
-                        
-                        <!-- Filtros -->
                         <div class="row mb-4">
                             <div class="col-md-3">
                                 <input type="text" class="form-control" id="student-search" placeholder="Buscar aluno...">
@@ -278,12 +229,11 @@
                             <div class="col-md-3">
                                 <select class="form-select" id="student-class-filter">
                                     <option value="">Todas as turmas</option>
-                                    <!-- Opções serão preenchidas por JavaScript -->
                                 </select>
                             </div>
                             <div class="col-md-3">
                                 <select class="form-select" id="student-fale-filter">
-                                    <option value="">Filtrar por F.A.L.E</option>
+                                    <option value="">Filtrar por F.A.L.A</option>
                                     <option value="O">Ótimo</option>
                                     <option value="MB">Muito Bom</option>
                                     <option value="B">Bom</option>
@@ -291,114 +241,156 @@
                                 </select>
                             </div>
                         </div>
-                        
-                        <!-- Tabela de Alunos -->
                         <div class="card">
                             <div class="card-body">
                                 <div class="table-responsive">
-                                    <table class="table table-hover" id="students-table">
+                                    <table class="table table-hover">
                                         <thead>
                                             <tr>
                                                 <th>Nome</th>
                                                 <th>Turma</th>
                                                 <th>Última Lição</th>
                                                 <th>Próxima Lição</th>
-                                                <th>F.A.L.E</th>
+                                                <th>F.A.L.A</th>
                                                 <th>Média</th>
                                                 <th>Ações</th>
                                             </tr>
                                         </thead>
-                                        <tbody id="students-table-body">
-                                            <!-- Alunos serão inseridos aqui por JavaScript -->
-                                            <tr>
-                                                <td colspan="7" class="text-center">Nenhum aluno cadastrado.</td>
-                                            </tr>
-                                        </tbody>
+                                        <tbody id="students-table-body"></tbody>
                                     </table>
                                 </div>
                             </div>
                         </div>
                     </section>
 
-                    <!-- Planejamento -->
+                    <!-- ========= AULAS (PLANEJAMENTO) ========= -->
                     <section id="planning-section" class="content-section d-none">
                         <div class="d-flex justify-content-between align-items-center mt-4 mb-3">
-                            <h2>Planejamento de Aulas</h2>
+                            <h2><i class="bi bi-calendar-check"></i> Aulas</h2>
                             <div>
-                                <button class="btn btn-success me-2" id="generate-order-btn">
-                                    <i class="bi bi-sort-numeric-down"></i> Gerar Ordem
+                                <button class="btn btn-success me-2" id="save-lesson-btn">
+                                    <i class="bi bi-save"></i> Salvar Aula
                                 </button>
-                                <button class="btn btn-info" id="suggest-pairs-btn">
-                                    <i class="bi bi-people-fill"></i> Sugerir Pares
+                                <button class="btn btn-primary" id="export-lesson-pdf-btn">
+                                    <i class="bi bi-file-earmark-pdf"></i> Exportar PDF
                                 </button>
                             </div>
                         </div>
-                        
-                        <!-- Seleção de Turma -->
-                        <div class="row mb-4">
-                            <div class="col-md-4">
-                                <select class="form-select" id="planning-class-select">
-                                    <option value="">Selecione uma turma</option>
-                                    <!-- Opções serão preenchidas por JavaScript -->
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <input type="date" class="form-control" id="planning-date" value="">
-                            </div>
-                        </div>
-                        
-                        <!-- Ordem de Atendimento -->
-                        <div class="row">
-                            <div class="col-lg-6">
-                                <div class="card mb-4">
-                                    <div class="card-header bg-primary text-white">
-                                        <h6 class="m-0 font-weight-bold">
-                                            <i class="bi bi-list-ol"></i> Ordem de Atendimento
-                                        </h6>
+
+                        <!-- Abas: Nova Aula / Histórico -->
+                        <ul class="nav nav-tabs mb-4" id="lessonTabs" role="tablist">
+                            <li class="nav-item">
+                                <button class="nav-link active" id="new-lesson-tab" data-bs-toggle="tab" data-bs-target="#new-lesson" type="button" role="tab">Nova Aula</button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link" id="history-lesson-tab" data-bs-toggle="tab" data-bs-target="#history-lesson" type="button" role="tab">Histórico de Aulas</button>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content">
+                            <!-- NOVA AULA -->
+                            <div class="tab-pane fade show active" id="new-lesson" role="tabpanel">
+                                <div class="row mb-4">
+                                    <div class="col-md-4">
+                                        <select class="form-select" id="lesson-class-select">
+                                            <option value="">Selecione uma turma</option>
+                                        </select>
                                     </div>
-                                    <div class="card-body">
-                                        <div id="attendance-order-list">
-                                            <p class="text-muted">Selecione uma turma para gerar a ordem de atendimento.</p>
+                                    <div class="col-md-3">
+                                        <input type="date" class="form-control" id="lesson-date" value="">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <button class="btn btn-info" id="load-lesson-btn">
+                                            <i class="bi bi-folder-symlink"></i> Carregar Aula
+                                        </button>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <button class="btn btn-outline-secondary" id="clear-lesson-btn">
+                                            <i class="bi bi-eraser"></i> Limpar
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-lg-6">
+                                        <div class="card mb-4">
+                                            <div class="card-header bg-primary text-white">
+                                                <h6 class="m-0"><i class="bi bi-list-ol"></i> Ordem de Atendimento</h6>
+                                            </div>
+                                            <div class="card-body" id="attendance-order-list">
+                                                <p class="text-muted">Selecione uma turma e clique em "Gerar Ordem".</p>
+                                            </div>
+                                            <div class="card-footer bg-transparent">
+                                                <button class="btn btn-sm btn-outline-primary" id="generate-order-btn">
+                                                    <i class="bi bi-sort-numeric-down"></i> Gerar Ordem
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-6">
+                                        <div class="card mb-4">
+                                            <div class="card-header bg-success text-white">
+                                                <h6 class="m-0"><i class="bi bi-people-fill"></i> Peer Work</h6>
+                                            </div>
+                                            <div class="card-body" id="peer-suggestions">
+                                                <p class="text-muted">Clique em "Sugerir Pares" para gerar combinações.</p>
+                                            </div>
+                                            <div class="card-footer bg-transparent d-flex justify-content-between">
+                                                <button class="btn btn-sm btn-outline-success" id="suggest-pairs-btn">
+                                                    <i class="bi bi-people-fill"></i> Sugerir Pares
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-warning" id="add-peer-manual-btn">
+                                                    <i class="bi bi-plus-circle"></i> Adicionar Par
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                            
-                            <!-- Sugestão de Pares -->
-                            <div class="col-lg-6">
+
+                                <!-- Observações da Aula -->
                                 <div class="card mb-4">
-                                    <div class="card-header bg-success text-white">
-                                        <h6 class="m-0 font-weight-bold">
-                                            <i class="bi bi-people-fill"></i> Sugestão de Peer Work
-                                        </h6>
+                                    <div class="card-header">
+                                        <h6 class="m-0">Observações da Aula</h6>
                                     </div>
                                     <div class="card-body">
-                                        <div id="peer-suggestions">
-                                            <p class="text-muted">Clique em "Sugerir Pares" para gerar combinações.</p>
-                                        </div>
+                                        <textarea class="form-control" id="lesson-notes" rows="3" placeholder="Anotações gerais sobre a aula..."></textarea>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Histórico de Pares -->
-                        <div class="row">
-                            <div class="col-12">
+
+                                <!-- Avaliações Individuais (F.A.L.A) -->
                                 <div class="card">
                                     <div class="card-header">
-                                        <h6 class="m-0 font-weight-bold">Histórico de Peer Work</h6>
+                                        <h6 class="m-0">Avaliações dos Alunos (Fala, Audição, Leitura, Escrita)</h6>
                                     </div>
                                     <div class="card-body">
-                                        <div id="peer-history">
-                                            <p class="text-muted">Nenhum histórico registrado.</p>
-                                        </div>
+                                        <div id="student-evaluations-container"></div>
                                     </div>
                                 </div>
+                            </div>
+
+                            <!-- HISTÓRICO DE AULAS -->
+                            <div class="tab-pane fade" id="history-lesson" role="tabpanel">
+                                <div class="row mb-4">
+                                    <div class="col-md-4">
+                                        <select class="form-select" id="history-class-select">
+                                            <option value="">Todas as turmas</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <input type="month" class="form-control" id="history-month" value="">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <button class="btn btn-primary" id="refresh-history-btn">
+                                            <i class="bi bi-arrow-clockwise"></i> Atualizar
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="lesson-history-list"></div>
                             </div>
                         </div>
                     </section>
 
-                    <!-- Frequência -->
+                    <!-- FREQUÊNCIA -->
                     <section id="attendance-section" class="content-section d-none">
                         <div class="d-flex justify-content-between align-items-center mt-4 mb-3">
                             <h2>Registro de Frequência</h2>
@@ -406,13 +398,10 @@
                                 <i class="bi bi-clipboard-check"></i> Registrar Frequência
                             </button>
                         </div>
-                        
-                        <!-- Filtros -->
                         <div class="row mb-4">
                             <div class="col-md-3">
                                 <select class="form-select" id="attendance-class-select">
                                     <option value="">Selecione uma turma</option>
-                                    <!-- Opções serão preenchidas por JavaScript -->
                                 </select>
                             </div>
                             <div class="col-md-3">
@@ -424,51 +413,37 @@
                                 </button>
                             </div>
                         </div>
-                        
-                        <!-- Tabela de Frequência -->
-                        <div class="card">
-                            <div class="card-body">
-                                <div id="attendance-table-container">
-                                    <p class="text-muted">Selecione uma turma e uma data para ver a frequência.</p>
-                                </div>
+                        <div class="card mb-4">
+                            <div class="card-body" id="attendance-table-container">
+                                <p class="text-muted">Selecione uma turma e data para ver a frequência.</p>
                             </div>
                         </div>
-                        
-                        <!-- Estatísticas de Frequência -->
-                        <div class="row mt-4">
+                        <div class="row">
                             <div class="col-md-6">
-                                <div class="card">
+                                <div class="card mb-4">
                                     <div class="card-header">
-                                        <h6 class="m-0 font-weight-bold">Frequência por Turma</h6>
+                                        <h6 class="m-0">Frequência por Turma</h6>
                                     </div>
-                                    <div class="card-body">
-                                        <div id="attendance-by-class">
-                                            <!-- Conteúdo será gerado por JavaScript -->
-                                        </div>
-                                    </div>
+                                    <div class="card-body" id="attendance-by-class"></div>
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="card">
+                                <div class="card mb-4">
                                     <div class="card-header">
-                                        <h6 class="m-0 font-weight-bold">Histórico de Frequência</h6>
+                                        <h6 class="m-0">Histórico de Frequência</h6>
                                     </div>
-                                    <div class="card-body">
-                                        <div id="attendance-history">
-                                            <!-- Conteúdo será gerado por JavaScript -->
-                                        </div>
-                                    </div>
+                                    <div class="card-body" id="attendance-history"></div>
                                 </div>
                             </div>
                         </div>
                     </section>
 
-                    <!-- Relatórios -->
+                    <!-- RELATÓRIOS -->
                     <section id="reports-section" class="content-section d-none">
                         <div class="d-flex justify-content-between align-items-center mt-4 mb-3">
                             <h2>Relatórios e Análises</h2>
                             <div>
-                                <button class="btn btn-success me-2" id="export-report-btn">
+                                <button class="btn btn-success me-2" id="export-report-pdf-btn">
                                     <i class="bi bi-file-earmark-pdf"></i> Exportar PDF
                                 </button>
                                 <button class="btn btn-primary" id="refresh-reports-btn">
@@ -476,13 +451,10 @@
                                 </button>
                             </div>
                         </div>
-                        
-                        <!-- Filtros de Relatórios -->
                         <div class="row mb-4">
                             <div class="col-md-3">
                                 <select class="form-select" id="report-class-select">
                                     <option value="">Todas as turmas</option>
-                                    <!-- Opções serão preenchidas por JavaScript -->
                                 </select>
                             </div>
                             <div class="col-md-3">
@@ -492,58 +464,41 @@
                                 <select class="form-select" id="report-type">
                                     <option value="progress">Progresso</option>
                                     <option value="attendance">Frequência</option>
-                                    <option value="fale">Avaliação F.A.L.E</option>
+                                    <option value="fale">Avaliação F.A.L.A</option>
                                 </select>
                             </div>
                         </div>
-                        
-                        <!-- Relatórios -->
                         <div class="row">
                             <div class="col-lg-6">
                                 <div class="card mb-4">
                                     <div class="card-header">
-                                        <h6 class="m-0 font-weight-bold">Progresso por Turma</h6>
+                                        <h6 class="m-0">Progresso por Turma</h6>
                                     </div>
-                                    <div class="card-body">
-                                        <div id="progress-report">
-                                            <!-- Conteúdo será gerado por JavaScript -->
-                                        </div>
-                                    </div>
+                                    <div class="card-body" id="progress-report"></div>
                                 </div>
                             </div>
-                            
                             <div class="col-lg-6">
                                 <div class="card mb-4">
                                     <div class="card-header">
-                                        <h6 class="m-0 font-weight-bold">Distribuição F.A.L.E</h6>
+                                        <h6 class="m-0">Distribuição F.A.L.A</h6>
                                     </div>
-                                    <div class="card-body">
-                                        <div id="fale-distribution">
-                                            <!-- Conteúdo será gerado por JavaScript -->
-                                        </div>
-                                    </div>
+                                    <div class="card-body" id="fale-distribution"></div>
                                 </div>
                             </div>
                         </div>
-                        
-                        <!-- Tabela Detalhada -->
                         <div class="row">
                             <div class="col-12">
                                 <div class="card">
                                     <div class="card-header">
-                                        <h6 class="m-0 font-weight-bold">Relatório Detalhado</h6>
+                                        <h6 class="m-0">Relatório Detalhado</h6>
                                     </div>
-                                    <div class="card-body">
-                                        <div id="detailed-report">
-                                            <!-- Conteúdo será gerado por JavaScript -->
-                                        </div>
-                                    </div>
+                                    <div class="card-body" id="detailed-report"></div>
                                 </div>
                             </div>
                         </div>
                     </section>
 
-                    <!-- Configurações -->
+                    <!-- CONFIGURAÇÕES -->
                     <section id="settings-section" class="content-section d-none">
                         <div class="d-flex justify-content-between align-items-center mt-4 mb-3">
                             <h2>Configurações do Sistema</h2>
@@ -551,25 +506,23 @@
                                 <i class="bi bi-save"></i> Salvar Configurações
                             </button>
                         </div>
-                        
-                        <!-- Configurações Gerais -->
                         <div class="row">
                             <div class="col-lg-6">
                                 <div class="card mb-4">
                                     <div class="card-header">
-                                        <h6 class="m-0 font-weight-bold">Configurações Gerais</h6>
+                                        <h6 class="m-0">Configurações Gerais</h6>
                                     </div>
                                     <div class="card-body">
                                         <div class="mb-3">
                                             <div class="form-check form-switch">
                                                 <input class="form-check-input" type="checkbox" id="auto-save">
-                                                <label class="form-check-label" for="auto-save">Salvamento automático</label>
+                                                <label class="form-check-label">Salvamento automático</label>
                                             </div>
                                         </div>
                                         <div class="mb-3">
                                             <div class="form-check form-switch">
                                                 <input class="form-check-input" type="checkbox" id="notifications">
-                                                <label class="form-check-label" for="notifications">Notificações</label>
+                                                <label class="form-check-label">Notificações</label>
                                             </div>
                                         </div>
                                         <div class="mb-3">
@@ -583,56 +536,41 @@
                                     </div>
                                 </div>
                             </div>
-                            
-                            <!-- Backup e Restauração -->
                             <div class="col-lg-6">
                                 <div class="card mb-4">
                                     <div class="card-header">
-                                        <h6 class="m-0 font-weight-bold">Backup e Restauração</h6>
+                                        <h6 class="m-0">Backup e Restauração</h6>
                                     </div>
                                     <div class="card-body">
-                                        <div class="mb-3">
-                                            <button class="btn btn-outline-success w-100 mb-2" id="export-all-btn">
-                                                <i class="bi bi-download"></i> Exportar Todos os Dados
-                                            </button>
-                                            <button class="btn btn-outline-warning w-100 mb-2" id="import-file-btn">
-                                                <i class="bi bi-upload"></i> Importar de Arquivo
-                                            </button>
-                                            <input type="file" id="import-file-input" class="d-none" accept=".json">
-                                        </div>
+                                        <button class="btn btn-outline-success w-100 mb-2" id="export-all-btn">
+                                            <i class="bi bi-download"></i> Exportar Todos os Dados
+                                        </button>
+                                        <button class="btn btn-outline-warning w-100 mb-2" id="import-file-btn">
+                                            <i class="bi bi-upload"></i> Importar de Arquivo
+                                        </button>
+                                        <input type="file" id="import-file-input" class="d-none" accept=".json">
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Configuração do GitHub -->
-                        <div class="row">
-                            <div class="col-12">
                                 <div class="card">
                                     <div class="card-header">
-                                        <h6 class="m-0 font-weight-bold">Integração com GitHub</h6>
+                                        <h6 class="m-0">Integração GitHub</h6>
                                     </div>
                                     <div class="card-body">
                                         <div class="mb-3">
-                                            <label class="form-label">Nome de Usuário</label>
-                                            <input type="text" class="form-control" id="github-username" placeholder="seu-usuario">
+                                            <label class="form-label">Usuário</label>
+                                            <input type="text" class="form-control" id="github-username">
                                         </div>
                                         <div class="mb-3">
                                             <label class="form-label">Repositório</label>
-                                            <input type="text" class="form-control" id="github-repo" placeholder="english-planner-data">
+                                            <input type="text" class="form-control" id="github-repo">
                                         </div>
                                         <div class="mb-3">
-                                            <label class="form-label">Token de Acesso (opcional)</label>
-                                            <input type="password" class="form-control" id="github-token" placeholder="ghp_...">
-                                            <small class="form-text text-muted">Crie um token em GitHub → Settings → Developer settings</small>
+                                            <label class="form-label">Token (opcional)</label>
+                                            <input type="password" class="form-control" id="github-token">
                                         </div>
                                         <div class="d-grid gap-2">
-                                            <button class="btn btn-success" id="github-save-btn">
-                                                <i class="bi bi-github"></i> Salvar no GitHub
-                                            </button>
-                                            <button class="btn btn-outline-success" id="github-load-btn">
-                                                <i class="bi bi-download"></i> Carregar do GitHub
-                                            </button>
+                                            <button class="btn btn-success" id="github-save-btn">Salvar no GitHub</button>
+                                            <button class="btn btn-outline-success" id="github-load-btn">Carregar do GitHub</button>
                                         </div>
                                     </div>
                                 </div>
@@ -640,17 +578,13 @@
                         </div>
                     </section>
                 </div>
-                
-                <!-- Footer -->
+
+                <!-- FOOTER -->
                 <footer class="pt-3 mt-4 text-muted border-top">
                     <div class="container-fluid">
                         <div class="row">
-                            <div class="col-md-6">
-                                English Planner Pro v1.0.0
-                            </div>
-                            <div class="col-md-6 text-end">
-                                <span id="last-save">Último salvamento: Nunca</span>
-                            </div>
+                            <div class="col-md-6">English Planner Pro v1.0</div>
+                            <div class="col-md-6 text-end"><span id="last-save"></span></div>
                         </div>
                     </div>
                 </footer>
@@ -658,9 +592,8 @@
         </div>
     </div>
 
-    <!-- MODAIS -->
-
-    <!-- Modal Adicionar/Editar Turma -->
+    <!-- ========= MODAIS ========= -->
+    <!-- Modal Turma -->
     <div class="modal fade" id="classModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -672,55 +605,55 @@
                     <form id="classForm">
                         <input type="hidden" id="classId">
                         <div class="mb-3">
-                            <label for="className" class="form-label">Nome da Turma *</label>
+                            <label class="form-label">Nome da Turma *</label>
                             <input type="text" class="form-control" id="className" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Dias da Semana *</label>
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" value="segunda" id="dayMonday">
-                                <label class="form-check-label" for="dayMonday">Segunda-feira</label>
+                                <label class="form-check-label">Segunda</label>
                             </div>
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" value="terca" id="dayTuesday">
-                                <label class="form-check-label" for="dayTuesday">Terça-feira</label>
+                                <label class="form-check-label">Terça</label>
                             </div>
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" value="quarta" id="dayWednesday">
-                                <label class="form-check-label" for="dayWednesday">Quarta-feira</label>
+                                <label class="form-check-label">Quarta</label>
                             </div>
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" value="quinta" id="dayThursday">
-                                <label class="form-check-label" for="dayThursday">Quinta-feira</label>
+                                <label class="form-check-label">Quinta</label>
                             </div>
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" value="sexta" id="dayFriday">
-                                <label class="form-check-label" for="dayFriday">Sexta-feira</label>
+                                <label class="form-check-label">Sexta</label>
                             </div>
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" value="sabado" id="daySaturday">
-                                <label class="form-check-label" for="daySaturday">Sábado</label>
+                                <label class="form-check-label">Sábado</label>
                             </div>
                         </div>
                         <div class="mb-3">
-                            <label for="classTime" class="form-label">Horário *</label>
+                            <label class="form-label">Horário *</label>
                             <input type="time" class="form-control" id="classTime" required>
                         </div>
                         <div class="mb-3">
-                            <label for="classColor" class="form-label">Cor da Turma</label>
+                            <label class="form-label">Cor da Turma</label>
                             <input type="color" class="form-control form-control-color" id="classColor" value="#4361ee">
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" id="saveClassBtn">Salvar Turma</button>
+                    <button type="button" class="btn btn-primary" id="saveClassBtn">Salvar</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Modal Adicionar/Editar Aluno -->
+    <!-- Modal Aluno -->
     <div class="modal fade" id="studentModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -733,33 +666,29 @@
                         <input type="hidden" id="studentId">
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label for="studentName" class="form-label">Nome do Aluno *</label>
+                                <label class="form-label">Nome do Aluno *</label>
                                 <input type="text" class="form-control" id="studentName" required>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label for="studentClass" class="form-label">Turma *</label>
-                                <select class="form-select" id="studentClass" required>
-                                    <option value="">Selecione uma turma</option>
-                                </select>
+                                <label class="form-label">Turma *</label>
+                                <select class="form-select" id="studentClass" required></select>
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label for="lastLesson" class="form-label">Última Lição</label>
+                                <label class="form-label">Última Lição</label>
                                 <input type="text" class="form-control" id="lastLesson" placeholder="Ex: 169 ou RW1">
-                                <small class="form-text text-muted">Número da lição ou revisão (RW)</small>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label for="nextLesson" class="form-label">Próxima Lição</label>
+                                <label class="form-label">Próxima Lição</label>
                                 <input type="text" class="form-control" id="nextLesson" placeholder="Ex: 170 ou RW2">
                             </div>
                         </div>
-                        
                         <hr>
-                        <h6>Avaliação F.A.L.E</h6>
+                        <h6>Avaliação F.A.L.A (Fala, Audição, Leitura, Escrita)</h6>
                         <div class="row">
                             <div class="col-md-3 mb-3">
-                                <label for="faleF" class="form-label">Fluência</label>
+                                <label class="form-label">Fala</label>
                                 <select class="form-select" id="faleF">
                                     <option value="">Selecione</option>
                                     <option value="O">Ótimo</option>
@@ -769,7 +698,7 @@
                                 </select>
                             </div>
                             <div class="col-md-3 mb-3">
-                                <label for="faleA" class="form-label">Pronúncia</label>
+                                <label class="form-label">Audição</label>
                                 <select class="form-select" id="faleA">
                                     <option value="">Selecione</option>
                                     <option value="O">Ótimo</option>
@@ -779,7 +708,7 @@
                                 </select>
                             </div>
                             <div class="col-md-3 mb-3">
-                                <label for="faleL" class="form-label">Compreensão</label>
+                                <label class="form-label">Leitura</label>
                                 <select class="form-select" id="faleL">
                                     <option value="">Selecione</option>
                                     <option value="O">Ótimo</option>
@@ -789,7 +718,7 @@
                                 </select>
                             </div>
                             <div class="col-md-3 mb-3">
-                                <label for="faleE" class="form-label">Expressão</label>
+                                <label class="form-label">Escrita</label>
                                 <select class="form-select" id="faleE">
                                     <option value="">Selecione</option>
                                     <option value="O">Ótimo</option>
@@ -799,56 +728,11 @@
                                 </select>
                             </div>
                         </div>
-                        
-                        <hr>
-                        <h6>Informações Adicionais</h6>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Dever de Casa</label>
-                                <div>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="homework" id="homeworkYes" value="sim">
-                                        <label class="form-check-label" for="homeworkYes">Feito</label>
-                                    </div>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="homework" id="homeworkNo" value="nao">
-                                        <label class="form-check-label" for="homeworkNo">Não Feito</label>
-                                    </div>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="homework" id="homeworkPartial" value="parcial">
-                                        <label class="form-check-label" for="homeworkPartial">Parcial</label>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Preparação da Aula</label>
-                                <div>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="preparation" id="preparationYes" value="sim">
-                                        <label class="form-check-label" for="preparationYes">Feita</label>
-                                    </div>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="preparation" id="preparationNo" value="nao">
-                                        <label class="form-check-label" for="preparationNo">Não Feita</label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="studentEvaluation" class="form-label">Avaliação do Aluno</label>
-                            <textarea class="form-control" id="studentEvaluation" rows="3" placeholder="Breve comentário sobre o aluno..."></textarea>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="classObservation" class="form-label">Observação da Aula</label>
-                            <textarea class="form-control" id="classObservation" rows="3" placeholder="Observações sobre a aula..."></textarea>
-                        </div>
                     </form>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" id="saveStudentBtn">Salvar Aluno</button>
+                    <button type="button" class="btn btn-primary" id="saveStudentBtn">Salvar</button>
                 </div>
             </div>
         </div>
@@ -862,45 +746,7 @@
                     <h5 class="modal-title">Detalhes da Turma</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
-                    <div id="classDetailContent">
-                        <!-- Conteúdo será gerado por JavaScript -->
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Registro de Frequência -->
-    <div class="modal fade" id="attendanceModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Registro de Frequência</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label for="modalClassSelect" class="form-label">Turma</label>
-                            <select class="form-select" id="modalClassSelect">
-                                <option value="">Selecione uma turma</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="modalDate" class="form-label">Data</label>
-                            <input type="date" class="form-control" id="modalDate" value="">
-                        </div>
-                    </div>
-                    
-                    <div id="attendanceModalContent">
-                        <p class="text-muted">Selecione uma turma para ver os alunos.</p>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" id="saveAttendanceBtn">Salvar Frequência</button>
-                </div>
+                <div class="modal-body" id="classDetailContent"></div>
             </div>
         </div>
     </div>
@@ -913,9 +759,7 @@
                     <h5 class="modal-title">Confirmar Ação</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
-                    <p id="confirmMessage">Tem certeza que deseja realizar esta ação?</p>
-                </div>
+                <div class="modal-body" id="confirmMessage"></div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="button" class="btn btn-danger" id="confirmActionBtn">Confirmar</button>
@@ -924,9 +768,9 @@
         </div>
     </div>
 
-    <!-- Bootstrap Bundle com Popper -->
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Nosso JavaScript -->
-    <script src="js/app.js"></script>
+    <!-- Nosso JS -->
+    <script src="app.js"></script>
 </body>
 </html>
