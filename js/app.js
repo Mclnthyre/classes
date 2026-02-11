@@ -31,7 +31,7 @@ const WEEK_DAYS = {
     quinta: 'Quinta', sexta: 'Sexta', sabado: 'Sábado'
 };
 
-// Mapeamento F.A.L.A (Fala, Audição, Leitura, Escrita)
+// Mapeamento F.A.L.E (Fala, Audição, Leitura, Escrita)
 const FALA_VALUES = { 'O': 4, 'MB': 3, 'B': 2, 'R': 1 };
 const FALA_CLASSES = { 'O': 'bg-O', 'MB': 'bg-MB', 'B': 'bg-B', 'R': 'bg-R' };
 
@@ -623,7 +623,7 @@ function renderClassesList() {
                     <div class="days-display">${daysHtml}</div>
                     <div class="mt-3"><small>Progresso</small><div class="progress mt-1"><div class="progress-bar" style="width:${stats.attendanceRate}%"></div></div></div>
                     <div class="stats-display">
-                        <div class="stat-item"><span class="stat-value">${stats.averageFale.toFixed(1)}</span><span class="stat-label">F.A.L.A</span></div>
+                        <div class="stat-item"><span class="stat-value">${stats.averageFale.toFixed(1)}</span><span class="stat-label">F.A.L.E</span></div>
                         <div class="stat-item"><span class="stat-value">${Math.round(stats.attendanceRate)}%</span><span class="stat-label">Frequência</span></div>
                         <div class="stat-item"><span class="stat-value">${students.length}</span><span class="stat-label">Alunos</span></div>
                     </div>
@@ -701,9 +701,9 @@ function showClassDetails(id) {
         <div class="d-flex align-items-center mb-3"><span class="class-color-badge me-2" style="background:${cls.color}"></span><h4>${cls.name}</h4></div>
         <p><strong>Horário:</strong> ${cls.days.map(d=>WEEK_DAYS[d]).join(', ')} às ${cls.time}</p>
         <p><strong>Total de Alunos:</strong> ${students.length}</p>
-        <div class="row mb-3"><div class="col-md-6"><div class="card text-center p-2"><h3>${stats.averageFale.toFixed(1)}</h3><small>Média F.A.L.A</small></div></div>
+        <div class="row mb-3"><div class="col-md-6"><div class="card text-center p-2"><h3>${stats.averageFale.toFixed(1)}</h3><small>Média F.A.L.E</small></div></div>
         <div class="col-md-6"><div class="card text-center p-2"><h3>${Math.round(stats.attendanceRate)}%</h3><small>Frequência</small></div></div></div>
-        <h5>Alunos</h5>${students.length ? `<div class="table-responsive"><table class="table table-sm"><thead><tr><th>Nome</th><th>Próx. Lição</th><th>F.A.L.A</th></tr></thead><tbody>${students.map(s=>`<tr><td>${s.name}</td><td><span class="lesson-badge ${getLessonType(s.nextLessonValue)}">${s.nextLesson}</span></td><td>${['F','A','L','E'].map(l=>s.fala?.[l]?`<span class="fala-badge ${FALA_CLASSES[s.fala[l]]} me-1">${l}</span>`:'').join('')}</td></tr>`).join('')}</tbody></table></div>` : '<p class="text-muted">Nenhum aluno</p>'}
+        <h5>Alunos</h5>${students.length ? `<div class="table-responsive"><table class="table table-sm"><thead><tr><th>Nome</th><th>Próx. Lição</th><th>F.A.L.E</th></tr></thead><tbody>${students.map(s=>`<tr><td>${s.name}</td><td><span class="lesson-badge ${getLessonType(s.nextLessonValue)}">${s.nextLesson}</span></td><td>${['F','A','L','E'].map(l=>s.fala?.[l]?`<span class="fala-badge ${FALA_CLASSES[s.fala[l]]} me-1">${l}</span>`:'').join('')}</td></tr>`).join('')}</tbody></table></div>` : '<p class="text-muted">Nenhum aluno</p>'}
     `;
     modal.show();
 }
@@ -998,12 +998,12 @@ function saveCurrentLesson() {
     // Avaliações dos alunos
     const studentEvaluations = collectStudentEvaluations();
 
-    // Atualizar médias F.A.L.A dos alunos com base nas avaliações desta aula
+    // Atualizar médias F.A.L.E dos alunos com base nas avaliações desta aula
     studentEvaluations.forEach(evalItem => {
         if (evalItem.fala) {
             const student = getStudentById(evalItem.studentId);
             if (student) {
-                // Atualizar a avaliação F.A.L.A do aluno (média geral)
+                // Atualizar a avaliação F.A.L.E do aluno (média geral)
                 const oldFala = student.fala || {};
                 // Aqui podemos optar por atualizar a média cumulativa ou apenas a mais recente
                 // Vamos atualizar para a mais recente (simples)
@@ -1278,7 +1278,7 @@ function loadReports() {
 function updateProgressReport(classId) {
     const rep = generateProgressReport(classId);
     const cont = document.getElementById('progress-report');
-    cont.innerHTML = `<p><strong>Média F.A.L.A:</strong> ${rep.averageFale.toFixed(1)}</p>
+    cont.innerHTML = `<p><strong>Média F.A.L.E:</strong> ${rep.averageFale.toFixed(1)}</p>
         <p><strong>Frequência média:</strong> ${rep.attendanceRate.toFixed(0)}%</p>
         <p><strong>Total de alunos:</strong> ${rep.totalStudents}</p>
         ${rep.classes.map(c => `<div class="mb-2"><div class="d-flex justify-content-between"><span>${c.className}</span><span>${c.averageFale.toFixed(1)}</span></div><div class="progress"><div class="progress-bar" style="width:${c.averageFale*25}%"></div></div></div>`).join('')}`;
@@ -1297,7 +1297,7 @@ function updateDetailedReport(classId, type) {
     const cont = document.getElementById('detailed-report');
     if (type === 'progress') {
         const rep = generateProgressReport(classId);
-        cont.innerHTML = `<table class="table table-sm"><thead><tr><th>Turma</th><th>Alunos</th><th>Média F.A.L.A</th><th>Frequência</th></tr></thead><tbody>
+        cont.innerHTML = `<table class="table table-sm"><thead><tr><th>Turma</th><th>Alunos</th><th>Média F.A.L.E</th><th>Frequência</th></tr></thead><tbody>
             ${rep.classes.map(c => `<tr><td>${c.className}</td><td>${c.studentCount}</td><td>${c.averageFale.toFixed(1)}</td><td>${c.attendanceRate.toFixed(0)}%</td></tr>`).join('')}
         </tbody></table>`;
     } else if (type === 'attendance') {
@@ -1325,7 +1325,7 @@ function exportReportPDF() {
     let title = '';
     if (type === 'progress') title = 'Relatório de Progresso';
     else if (type === 'attendance') title = 'Relatório de Frequência';
-    else title = 'Relatório F.A.L.A';
+    else title = 'Relatório F.A.L.E';
     const content = document.getElementById('detailed-report').innerHTML;
     const progressHTML = document.getElementById('progress-report').innerHTML;
     const falaHTML = document.getElementById('fale-distribution').innerHTML;
