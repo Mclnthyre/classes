@@ -1,5 +1,5 @@
 /* ============================================
-   ENGLISH PLANNER PRO - APP COMPLETO
+   ENGLISH PLANNER PRO - APP COMPLETO (CORRIGIDO)
    ============================================ */
 
 // ---------- ESTADO GLOBAL ----------
@@ -14,8 +14,8 @@ const AppState = {
 const DEFAULT_DATA = {
     classes: [],
     students: [],
-    lessons: [],      // Aulas planejadas/realizadas
-    attendance: [],   // Registros de frequência (compatibilidade)
+    lessons: [],
+    attendance: [],
     settings: {
         autoSave: true,
         theme: 'light',
@@ -31,21 +31,43 @@ const WEEK_DAYS = {
     quinta: 'Quinta', sexta: 'Sexta', sabado: 'Sábado'
 };
 
-// Mapeamento F.A.L.E (Fala, Audição, Leitura, Escrita)
+// Mapeamento F.A.L.E
 const FALA_VALUES = { 'O': 4, 'MB': 3, 'B': 2, 'R': 1 };
 const FALA_CLASSES = { 'O': 'bg-O', 'MB': 'bg-MB', 'B': 'bg-B', 'R': 'bg-R' };
 
-// ---------- INICIALIZAÇÃO ----------
-function initApp() {
-    console.log('Iniciando English Planner...');
-    loadData();
-    loadSettings();
-    loadGitHubConfig();
-    setupEventListeners();
-    setupNavigation();
-    updateUI();
-    initTheme();
-    updateLastSave();
+// ---------- FUNÇÕES AUXILIARES ----------
+function calculateLessonValue(lesson) {
+    if (!lesson) return 0;
+    return lesson.startsWith('RW') ? 1000 + parseInt(lesson.slice(2) || 0) : parseInt(lesson) || 0;
+}
+
+function calculateFalaAverage(fala) {
+    if (!fala) return 0;
+    const vals = [fala.F, fala.A, fala.L, fala.E].map(v => FALA_VALUES[v] || 0);
+    return vals.reduce((a, b) => a + b, 0) / vals.filter(v => v > 0).length || 0;
+}
+
+function getLessonType(val) {
+    if (val >= 1000) return 'review';
+    return val % 2 === 0 ? 'even' : 'odd';
+}
+
+function showNotification(msg, type = 'info') {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert-message alert alert-${type === 'error' ? 'danger' : type}`;
+    alertDiv.innerHTML = `<i class="bi ${type === 'success' ? 'bi-check-circle' : type === 'error' ? 'bi-exclamation-circle' : 'bi-info-circle'}"></i> ${msg}`;
+    document.body.appendChild(alertDiv);
+    setTimeout(() => alertDiv.remove(), 3000);
+}
+
+function updateLastSave() {
+    const el = document.getElementById('last-save');
+    if (el) el.textContent = `Último salvamento: ${new Date().toLocaleTimeString('pt-BR')}`;
+}
+
+function toggleSidebar(show) {
+    const s = document.getElementById('sidebar');
+    s.classList.toggle('show', show);
 }
 
 // ---------- PERSISTÊNCIA ----------
@@ -53,36 +75,51 @@ function loadData() {
     try {
         const saved = localStorage.getItem('englishPlannerData');
         AppState.data = saved ? JSON.parse(saved) : getSampleData();
-        // Garante estrutura
-        AppState.data = { ...DEFAULT_DATA, ...AppState.data,
+        // Garante estrutura mínima
+        AppState.data = {
+            ...DEFAULT_DATA,
+            ...AppState.data,
             classes: AppState.data.classes || [],
             students: AppState.data.students || [],
             lessons: AppState.data.lessons || [],
             attendance: AppState.data.attendance || []
         };
+        
+        // RECALCULAR VALORES DERIVADOS DOS ALUNOS
+        AppState.data.students.forEach(s => {
+            s.nextLessonValue = calculateLessonValue(s.nextLesson);
+            s.lastLessonValue = calculateLessonValue(s.lastLesson);
+            s.average = calculateFalaAverage(s.fala);
+        });
+        
         if (!saved) saveData();
-    } catch(e) {
+    } catch (e) {
         console.error(e);
         AppState.data = getSampleData();
         saveData();
     }
 }
+
 function saveData() {
     localStorage.setItem('englishPlannerData', JSON.stringify(AppState.data));
     updateLastSave();
     if (AppState.settings?.autoSave) showNotification('Dados salvos', 'success');
 }
+
 function loadSettings() {
     const s = localStorage.getItem('englishPlannerSettings');
     AppState.settings = s ? JSON.parse(s) : DEFAULT_DATA.settings;
 }
+
 function saveSettings() {
     localStorage.setItem('englishPlannerSettings', JSON.stringify(AppState.settings));
 }
+
 function loadGitHubConfig() {
     const g = localStorage.getItem('githubConfig');
     AppState.githubConfig = g ? JSON.parse(g) : DEFAULT_GITHUB;
 }
+
 function saveGitHubConfig() {
     localStorage.setItem('githubConfig', JSON.stringify(AppState.githubConfig));
 }
@@ -91,8 +128,8 @@ function saveGitHubConfig() {
 function getSampleData() {
     return {
         classes: [
-            { id: 1, name: 'Kids A', days: ['segunda','quarta'], time: '16:00', color: '#4361ee' },
-            { id: 2, name: 'Teens B', days: ['terca','quinta'], time: '17:00', color: '#7209b7' },
+            { id: 1, name: 'Kids A', days: ['segunda', 'quarta'], time: '16:00', color: '#4361ee' },
+            { id: 2, name: 'Teens B', days: ['terca', 'quinta'], time: '17:00', color: '#7209b7' },
             { id: 3, name: 'Adults C', days: ['sexta'], time: '19:00', color: '#38b000' }
         ],
         students: [
@@ -118,41 +155,11 @@ function getSampleData() {
     };
 }
 
-// ---------- FUNÇÕES AUXILIARES ----------
-function showNotification(msg, type = 'info') {
-    const alertDiv = document.createElement('div');
-    alertDiv.className = `alert-message alert alert-${type === 'error' ? 'danger' : type}`;
-    alertDiv.innerHTML = `<i class="bi ${type==='success'?'bi-check-circle':type==='error'?'bi-exclamation-circle':'bi-info-circle'}"></i> ${msg}`;
-    document.body.appendChild(alertDiv);
-    setTimeout(() => alertDiv.remove(), 3000);
-}
-function updateLastSave() {
-    const el = document.getElementById('last-save');
-    if (el) el.textContent = `Último salvamento: ${new Date().toLocaleTimeString('pt-BR')}`;
-}
-function toggleSidebar(show) {
-    const s = document.getElementById('sidebar');
-    s.classList.toggle('show', show);
-}
-function calculateLessonValue(lesson) {
-    if (!lesson) return 0;
-    return lesson.startsWith('RW') ? 1000 + parseInt(lesson.slice(2)||0) : parseInt(lesson)||0;
-}
-function calculateFalaAverage(fala) {
-    if (!fala) return 0;
-    const vals = [fala.F, fala.A, fala.L, fala.E].map(v => FALA_VALUES[v]||0);
-    return vals.reduce((a,b)=>a+b,0) / vals.filter(v=>v>0).length || 0;
-}
-function getLessonType(val) {
-    if (val >= 1000) return 'review';
-    return val % 2 === 0 ? 'even' : 'odd';
-}
-
 // ---------- CRUD TURMAS ----------
 function getClasses() { return AppState.data.classes; }
 function getClassById(id) { return AppState.data.classes.find(c => c.id === id); }
 function addClass(data) {
-    const newId = AppState.data.classes.length ? Math.max(...AppState.data.classes.map(c=>c.id)) + 1 : 1;
+    const newId = AppState.data.classes.length ? Math.max(...AppState.data.classes.map(c => c.id)) + 1 : 1;
     const newClass = { id: newId, ...data };
     AppState.data.classes.push(newClass);
     saveData();
@@ -178,7 +185,7 @@ function getStudentsByClass(classId) {
 }
 function getClassStats(classId) {
     const students = getStudentsByClass(classId);
-    const avg = students.reduce((sum,s)=>sum + (s.average||0),0) / (students.length||1);
+    const avg = students.reduce((sum, s) => sum + (s.average || 0), 0) / (students.length || 1);
     let totalPresent = 0, totalClasses = 0;
     students.forEach(s => {
         s.attendance?.forEach(a => { if (a.status === 'present') totalPresent++; totalClasses++; });
@@ -186,7 +193,7 @@ function getClassStats(classId) {
     return {
         totalStudents: students.length,
         averageFale: avg,
-        attendanceRate: totalClasses ? (totalPresent/totalClasses)*100 : 0,
+        attendanceRate: totalClasses ? (totalPresent / totalClasses) * 100 : 0,
         nextLessons: students.map(s => s.nextLesson)
     };
 }
@@ -195,7 +202,7 @@ function getClassStats(classId) {
 function getStudents() { return AppState.data.students; }
 function getStudentById(id) { return AppState.data.students.find(s => s.id === id); }
 function addStudent(data) {
-    const newId = AppState.data.students.length ? Math.max(...AppState.data.students.map(s=>s.id)) + 1 : 1;
+    const newId = AppState.data.students.length ? Math.max(...AppState.data.students.map(s => s.id)) + 1 : 1;
     const student = {
         id: newId,
         attendance: [], peerHistory: [],
@@ -225,20 +232,66 @@ function updateStudent(id, data) {
 }
 function deleteStudent(id) {
     const idx = AppState.data.students.findIndex(s => s.id === id);
-    if (idx !== -1) { AppState.data.students.splice(idx,1); saveData(); return true; }
+    if (idx !== -1) { AppState.data.students.splice(idx, 1); saveData(); return true; }
     return false;
 }
+
+// ---------- ORDENAÇÃO CORRIGIDA ----------
 function sortStudentsByLesson(students) {
-    return [...students].sort((a,b) => {
-        const aRev = a.nextLessonValue >= 1000, bRev = b.nextLessonValue >= 1000;
-        if (aRev && !bRev) return 1;
-        if (!aRev && bRev) return -1;
+    return [...students].sort((a, b) => {
+        const aRev = a.nextLessonValue >= 1000;
+        const bRev = b.nextLessonValue >= 1000;
+        if (aRev && !bRev) return 1;   // revisões depois
+        if (!aRev && bRev) return -1;  // revisões antes
         const aEven = a.nextLessonValue % 2 === 0;
         const bEven = b.nextLessonValue % 2 === 0;
-        if (aEven && !bEven) return -1;
-        if (!aEven && bEven) return 1;
+        if (aEven && !bEven) return -1; // pares primeiro
+        if (!aEven && bEven) return 1;  // ímpares depois
         return a.nextLessonValue - b.nextLessonValue;
     });
+}
+
+function generateAttendanceOrder(classId) {
+    const students = getStudentsByClass(classId);
+    const sorted = sortStudentsByLesson(students);
+    return sorted.map((s, i) => ({
+        order: i + 1,
+        studentId: s.id,
+        studentName: s.name,
+        nextLesson: s.nextLesson,
+        lessonType: getLessonType(s.nextLessonValue),
+        faleAverage: s.average
+    }));
+}
+
+// ---------- SUGESTÃO DE PARES (COM SUPORTE A PAR MANUAL) ----------
+function suggestPeerPairs(classId) {
+    let students = getStudentsByClass(classId).filter(s => s.nextLessonValue < 1000);
+    if (students.length < 2) return [];
+    students.sort((a, b) => a.nextLessonValue - b.nextLessonValue);
+    const pairs = [], used = new Set();
+    for (let i = 0; i < students.length; i++) {
+        if (used.has(students[i].id)) continue;
+        let best = null, minDiff = Infinity;
+        for (let j = i + 1; j < students.length; j++) {
+            if (used.has(students[j].id)) continue;
+            const diff = Math.abs(students[i].nextLessonValue - students[j].nextLessonValue);
+            if (diff <= 2 && diff < minDiff) { best = students[j]; minDiff = diff; }
+        }
+        if (best) {
+            pairs.push({ student1: students[i], student2: best, difference: minDiff });
+            used.add(students[i].id); used.add(best.id);
+        }
+    }
+    const remaining = students.filter(s => !used.has(s.id));
+    for (let i = 0; i < remaining.length; i += 2) {
+        if (i + 1 < remaining.length) pairs.push({
+            student1: remaining[i],
+            student2: remaining[i + 1],
+            difference: Math.abs(remaining[i].nextLessonValue - remaining[i + 1].nextLessonValue)
+        });
+    }
+    return pairs;
 }
 
 // ---------- SISTEMA DE AULAS (LESSONS) ----------
@@ -263,53 +316,13 @@ function getLessons(classId = null, month = null) {
     let lessons = AppState.data.lessons || [];
     if (classId) lessons = lessons.filter(l => l.classId === classId);
     if (month) lessons = lessons.filter(l => l.date.startsWith(month));
-    return lessons.sort((a,b) => b.date.localeCompare(a.date));
+    return lessons.sort((a, b) => b.date.localeCompare(a.date));
 }
 function deleteLesson(classId, date) {
     const initial = AppState.data.lessons?.length || 0;
     AppState.data.lessons = AppState.data.lessons?.filter(l => !(l.classId === classId && l.date === date)) || [];
     saveData();
     return initial !== AppState.data.lessons.length;
-}
-
-// ---------- ORDEM DE ATENDIMENTO ----------
-function generateAttendanceOrder(classId) {
-    const students = getStudentsByClass(classId);
-    const sorted = sortStudentsByLesson(students);
-    return sorted.map((s,i) => ({
-        order: i+1, studentId: s.id, studentName: s.name,
-        nextLesson: s.nextLesson, lessonType: getLessonType(s.nextLessonValue),
-        faleAverage: s.average
-    }));
-}
-
-// ---------- SUGESTÃO DE PARES ----------
-function suggestPeerPairs(classId) {
-    let students = getStudentsByClass(classId).filter(s => s.nextLessonValue < 1000);
-    if (students.length < 2) return [];
-    students.sort((a,b) => a.nextLessonValue - b.nextLessonValue);
-    const pairs = [], used = new Set();
-    for (let i=0; i<students.length; i++) {
-        if (used.has(students[i].id)) continue;
-        let best = null, minDiff = Infinity;
-        for (let j=i+1; j<students.length; j++) {
-            if (used.has(students[j].id)) continue;
-            const diff = Math.abs(students[i].nextLessonValue - students[j].nextLessonValue);
-            if (diff <= 2 && diff < minDiff) { best = students[j]; minDiff = diff; }
-        }
-        if (best) {
-            pairs.push({ student1: students[i], student2: best, difference: minDiff });
-            used.add(students[i].id); used.add(best.id);
-        }
-    }
-    const remaining = students.filter(s => !used.has(s.id));
-    for (let i=0; i<remaining.length; i+=2) {
-        if (i+1 < remaining.length) pairs.push({
-            student1: remaining[i], student2: remaining[i+1],
-            difference: Math.abs(remaining[i].nextLessonValue - remaining[i+1].nextLessonValue)
-        });
-    }
-    return pairs;
 }
 
 // ---------- FREQUÊNCIA ----------
@@ -320,7 +333,8 @@ function getAttendanceByClassAndDate(classId, date) {
         const evalData = lesson?.studentEvaluations?.find(e => e.studentId === s.id) || {};
         const att = s.attendance?.find(a => a.date === date) || {};
         return {
-            studentId: s.id, studentName: s.name,
+            studentId: s.id,
+            studentName: s.name,
             status: att.status || evalData.status || 'absent',
             homework: evalData.homework || 'nao',
             preparation: evalData.preparation || 'nao',
@@ -338,7 +352,6 @@ function registerAttendance(classId, date, data) {
             student.attendance.push({ date, status: rec.status, observation: rec.observation || '' });
         }
     });
-    // Também salva como parte da aula, se existir
     const lesson = getLesson(classId, date);
     if (lesson) {
         if (!lesson.studentEvaluations) lesson.studentEvaluations = [];
@@ -362,31 +375,48 @@ function registerAttendance(classId, date, data) {
 }
 function getStudentAttendanceStats(studentId) {
     const s = getStudentById(studentId);
-    if (!s?.attendance) return { present:0, absent:0, justified:0, total:0, rate:0 };
-    const stats = { present:0, absent:0, justified:0, total: s.attendance.length };
+    if (!s?.attendance) return { present: 0, absent: 0, justified: 0, total: 0, rate: 0 };
+    const stats = { present: 0, absent: 0, justified: 0, total: s.attendance.length };
     s.attendance.forEach(a => {
         if (a.status === 'present') stats.present++;
         else if (a.status === 'absent') stats.absent++;
         else if (a.status === 'justified') stats.justified++;
     });
-    stats.rate = stats.total ? (stats.present/stats.total)*100 : 0;
+    stats.rate = stats.total ? (stats.present / stats.total) * 100 : 0;
     return stats;
+}
+function getClassAttendanceStats(classId) {
+    const students = getStudentsByClass(classId);
+    let totalRate = 0, count = 0;
+    students.forEach(s => {
+        const stats = getStudentAttendanceStats(s.id);
+        if (stats.total > 0) { totalRate += stats.rate; count++; }
+    });
+    return { averageRate: count ? totalRate / count : 0 };
 }
 
 // ---------- RELATÓRIOS ----------
 function generateProgressReport(classId = null) {
     const classes = classId ? [getClassById(classId)] : getClasses();
     let totalFale = 0, totalAtt = 0, count = 0;
-    const classReports = classes.filter(c=>c).map(c => {
+    const classReports = classes.filter(c => c).map(c => {
         const st = getClassStats(c.id);
-        totalFale += st.averageFale; totalAtt += st.attendanceRate; count++;
-        return { className: c.name, studentCount: st.totalStudents, averageFale: st.averageFale, attendanceRate: st.attendanceRate, nextLessons: st.nextLessons };
+        totalFale += st.averageFale;
+        totalAtt += st.attendanceRate;
+        count++;
+        return {
+            className: c.name,
+            studentCount: st.totalStudents,
+            averageFale: st.averageFale,
+            attendanceRate: st.attendanceRate,
+            nextLessons: st.nextLessons
+        };
     });
     return {
         totalClasses: classes.length,
         totalStudents: AppState.data.students.length,
-        averageFale: count ? totalFale/count : 0,
-        attendanceRate: count ? totalAtt/count : 0,
+        averageFale: count ? totalFale / count : 0,
+        attendanceRate: count ? totalAtt / count : 0,
         classes: classReports
     };
 }
@@ -395,27 +425,35 @@ function generateAttendanceReport(classId = null) {
     let totalPres = 0, totalCls = 0;
     const studs = students.map(s => {
         const st = getStudentAttendanceStats(s.id);
-        totalPres += st.present; totalCls += st.total;
+        totalPres += st.present;
+        totalCls += st.total;
         return {
             studentName: s.name,
             className: getClassById(s.classId)?.name || 'Sem turma',
-            present: st.present, absent: st.absent, justified: st.justified,
+            present: st.present,
+            absent: st.absent,
+            justified: st.justified,
             attendanceRate: st.rate,
             lastAttendance: s.attendance?.slice(-1)[0]?.date || 'Nunca'
         };
     });
-    return { totalStudents: students.length, overallAttendance: totalCls ? (totalPres/totalCls)*100 : 0, students: studs };
+    return {
+        totalStudents: students.length,
+        overallAttendance: totalCls ? (totalPres / totalCls) * 100 : 0,
+        students: studs
+    };
 }
 function generateFalaReport(classId = null) {
     const students = classId ? getStudentsByClass(classId) : getStudents();
-    const dist = { O:0, MB:0, B:0, R:0 }, totals = { F:0, A:0, L:0, E:0 };
+    const dist = { O: 0, MB: 0, B: 0, R: 0 };
+    const totals = { F: 0, A: 0, L: 0, E: 0 };
     let studCount = 0;
-    const studs = students.filter(s=>s.fala).map(s => {
-        Object.values(s.fala).forEach(v => { if (dist[v]!==undefined) dist[v]++; });
+    const studs = students.filter(s => s.fala).map(s => {
+        Object.values(s.fala).forEach(v => { if (dist[v] !== undefined) dist[v]++; });
         if (s.fala.F) { totals.F += FALA_VALUES[s.fala.F]; studCount++; }
-        if (s.fala.A) { totals.A += FALA_VALUES[s.fala.A]; }
-        if (s.fala.L) { totals.L += FALA_VALUES[s.fala.L]; }
-        if (s.fala.E) { totals.E += FALA_VALUES[s.fala.E]; }
+        if (s.fala.A) totals.A += FALA_VALUES[s.fala.A];
+        if (s.fala.L) totals.L += FALA_VALUES[s.fala.L];
+        if (s.fala.E) totals.E += FALA_VALUES[s.fala.E];
         return {
             studentName: s.name,
             className: getClassById(s.classId)?.name || 'Sem turma',
@@ -427,7 +465,12 @@ function generateFalaReport(classId = null) {
     return {
         totalStudents: students.length,
         distribution: dist,
-        averages: { F: totals.F/studCount || 0, A: totals.A/studCount || 0, L: totals.L/studCount || 0, E: totals.E/studCount || 0 },
+        averages: {
+            F: totals.F / studCount || 0,
+            A: totals.A / studCount || 0,
+            L: totals.L / studCount || 0,
+            E: totals.E / studCount || 0
+        },
         students: studs
     };
 }
@@ -444,7 +487,7 @@ function setupEventListeners() {
     document.getElementById('sidebarToggle')?.addEventListener('click', () => toggleSidebar(true));
 
     // Botão "Novo"
-    document.getElementById('add-new-btn').addEventListener('click', () => {
+    document.getElementById('add-new-btn')?.addEventListener('click', () => {
         if (AppState.currentSection === 'classes') showClassModal();
         if (AppState.currentSection === 'students') showStudentModal();
     });
@@ -484,7 +527,8 @@ function setupEventListeners() {
     document.getElementById('save-lesson-btn')?.addEventListener('click', saveCurrentLesson);
     document.getElementById('load-lesson-btn')?.addEventListener('click', loadExistingLesson);
     document.getElementById('clear-lesson-btn')?.addEventListener('click', clearLessonForm);
-    document.getElementById('add-peer-manual-btn')?.addEventListener('click', addManualPeer);
+    document.getElementById('add-peer-manual-btn')?.addEventListener('click', showManualPeerModal);
+    document.getElementById('confirmManualPeerBtn')?.addEventListener('click', addManualPeer);
     document.getElementById('history-class-select')?.addEventListener('change', renderLessonHistory);
     document.getElementById('history-month')?.addEventListener('change', renderLessonHistory);
     document.getElementById('refresh-history-btn')?.addEventListener('click', renderLessonHistory);
@@ -493,7 +537,7 @@ function setupEventListeners() {
     document.getElementById('attendance-class-select')?.addEventListener('change', loadAttendanceTable);
     document.getElementById('attendance-date')?.addEventListener('change', loadAttendanceTable);
     document.getElementById('load-attendance-btn')?.addEventListener('click', loadAttendanceTable);
-    document.getElementById('register-attendance-btn')?.addEventListener('click', showLegacyAttendanceModal); // simplificado
+    document.getElementById('register-attendance-btn')?.addEventListener('click', showLegacyAttendanceModal);
 
     // Relatórios
     document.getElementById('report-class-select')?.addEventListener('change', loadReports);
@@ -508,10 +552,10 @@ function setupEventListeners() {
     document.getElementById('darkModeSwitch')?.addEventListener('change', toggleDarkMode);
     document.getElementById('theme-select')?.addEventListener('change', changeTheme);
     document.getElementById('export-data')?.addEventListener('click', exportData);
-    document.getElementById('import-data')?.addEventListener('click', ()=>document.getElementById('import-file-input').click());
+    document.getElementById('import-data')?.addEventListener('click', () => document.getElementById('import-file-input').click());
     document.getElementById('import-file-input')?.addEventListener('change', handleFileImport);
     document.getElementById('export-all-btn')?.addEventListener('click', exportData);
-    document.getElementById('import-file-btn')?.addEventListener('click', ()=>document.getElementById('import-file-input').click());
+    document.getElementById('import-file-btn')?.addEventListener('click', () => document.getElementById('import-file-input').click());
     document.getElementById('github-save-btn')?.addEventListener('click', exportToGitHub);
     document.getElementById('github-load-btn')?.addEventListener('click', importFromGitHub);
 }
@@ -573,19 +617,17 @@ function updateUI() {
 function updateDashboard() {
     document.getElementById('stats-classes').textContent = AppState.data.classes.length;
     document.getElementById('stats-students').textContent = AppState.data.students.length;
-    const today = Object.keys(WEEK_DAYS)[new Date().getDay()-1];
+    const today = Object.keys(WEEK_DAYS)[new Date().getDay() - 1];
     const todayClasses = AppState.data.classes.filter(c => c.days.includes(today)).length;
     document.getElementById('stats-today-classes').textContent = todayClasses;
     let totalAtt = 0, count = 0;
     AppState.data.classes.forEach(c => { const s = getClassStats(c.id); totalAtt += s.attendanceRate; count++; });
-    document.getElementById('stats-attendance').textContent = `${count ? Math.round(totalAtt/count) : 0}%`;
-    // Progresso
+    document.getElementById('stats-attendance').textContent = `${count ? Math.round(totalAtt / count) : 0}%`;
     const prog = document.getElementById('classes-progress');
     prog.innerHTML = AppState.data.classes.map(c => {
         const st = getClassStats(c.id);
-        return `<div class="mb-2"><div class="d-flex justify-content-between"><span>${c.name}</span><span>${st.averageFale.toFixed(1)}</span></div><div class="progress"><div class="progress-bar" style="width:${st.averageFale*25}%"></div></div></div>`;
+        return `<div class="mb-2"><div class="d-flex justify-content-between"><span>${c.name}</span><span>${st.averageFale.toFixed(1)}</span></div><div class="progress"><div class="progress-bar" style="width:${st.averageFale * 25}%"></div></div></div>`;
     }).join('') || '<p class="text-muted">Nenhuma turma</p>';
-    // Próximas aulas
     const upcoming = document.getElementById('upcoming-classes');
     const todayCls = AppState.data.classes.filter(c => c.days.includes(today));
     upcoming.innerHTML = todayCls.map(c => `<div class="d-flex align-items-center mb-2"><span class="class-color-badge" style="background:${c.color}"></span><div><strong>${c.name}</strong><div class="text-muted">${c.time}</div></div></div>`).join('') || '<p class="text-muted">Nenhuma aula hoje</p>';
@@ -594,21 +636,22 @@ function updateDashboard() {
 // ---------- TURMAS ----------
 function updateClassesSection() {
     renderClassesList();
-    document.getElementById('class-day-filter').innerHTML = '<option value="">Filtrar por dia</option>' + 
-        Object.entries(WEEK_DAYS).map(([k,v]) => `<option value="${k}">${v}</option>`).join('');
+    const filter = document.getElementById('class-day-filter');
+    filter.innerHTML = '<option value="">Filtrar por dia</option>' +
+        Object.entries(WEEK_DAYS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
 }
 function renderClassesList() {
     const container = document.getElementById('classes-list');
     const classes = getClasses();
     if (!classes.length) {
         container.innerHTML = '<div class="col-12"><div class="empty-state"><i class="bi bi-people-fill fs-1"></i><h5>Nenhuma turma</h5><button class="btn btn-primary" id="add-first-class-btn">Criar Primeira Turma</button></div></div>';
-        document.getElementById('add-first-class-btn')?.addEventListener('click', ()=>showClassModal());
+        document.getElementById('add-first-class-btn')?.addEventListener('click', () => showClassModal());
         return;
     }
     container.innerHTML = classes.map(cls => {
         const students = getStudentsByClass(cls.id);
         const stats = getClassStats(cls.id);
-        const daysHtml = cls.days.map(d => `<span class="day-badge">${WEEK_DAYS[d]?.slice(0,3)}</span>`).join('');
+        const daysHtml = cls.days.map(d => `<span class="day-badge">${WEEK_DAYS[d]?.slice(0, 3)}</span>`).join('');
         return `<div class="col-lg-6 col-xl-6">
             <div class="card class-card" data-class-id="${cls.id}">
                 <div class="card-body">
@@ -619,7 +662,7 @@ function renderClassesList() {
                         </div>
                         <span class="badge bg-primary">${students.length} alunos</span>
                     </div>
-                    <p class="text-muted mb-2"><i class="bi bi-calendar-week"></i> ${cls.days.map(d=>WEEK_DAYS[d]).join(', ')} às ${cls.time}</p>
+                    <p class="text-muted mb-2"><i class="bi bi-calendar-week"></i> ${cls.days.map(d => WEEK_DAYS[d]).join(', ')} às ${cls.time}</p>
                     <div class="days-display">${daysHtml}</div>
                     <div class="mt-3"><small>Progresso</small><div class="progress mt-1"><div class="progress-bar" style="width:${stats.attendanceRate}%"></div></div></div>
                     <div class="stats-display">
@@ -636,7 +679,6 @@ function renderClassesList() {
             </div>
         </div>`;
     }).join('');
-    // Event listeners
     container.querySelectorAll('.view-class-btn').forEach(b => b.addEventListener('click', e => showClassDetails(parseInt(e.target.closest('button').dataset.id))));
     container.querySelectorAll('.edit-class-btn').forEach(b => b.addEventListener('click', e => showClassModal(parseInt(e.target.closest('button').dataset.id))));
     container.querySelectorAll('.delete-class-btn').forEach(b => b.addEventListener('click', e => deleteClassWithConfirm(parseInt(e.target.closest('button').dataset.id))));
@@ -658,7 +700,7 @@ function showClassModal(id = null) {
     const form = document.getElementById('classForm');
     form.reset();
     document.getElementById('classColor').value = '#4361ee';
-    ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].forEach(d => document.getElementById(`day${d}`).checked = false);
+    ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].forEach(d => document.getElementById(`day${d}`).checked = false);
     if (id) {
         const cls = getClassById(id);
         if (cls) {
@@ -667,7 +709,7 @@ function showClassModal(id = null) {
             document.getElementById('classTime').value = cls.time;
             document.getElementById('classColor').value = cls.color;
             cls.days.forEach(d => {
-                const map = { segunda:'Monday', terca:'Tuesday', quarta:'Wednesday', quinta:'Thursday', sexta:'Friday', sabado:'Saturday' };
+                const map = { segunda: 'Monday', terca: 'Tuesday', quarta: 'Wednesday', quinta: 'Thursday', sexta: 'Friday', sabado: 'Saturday' };
                 const cb = document.getElementById(`day${map[d]}`);
                 if (cb) cb.checked = true;
             });
@@ -681,13 +723,13 @@ function saveClass() {
     const time = document.getElementById('classTime').value;
     const color = document.getElementById('classColor').value;
     const days = [];
-    const map = { Monday:'segunda', Tuesday:'terca', Wednesday:'quarta', Thursday:'quinta', Friday:'sexta', Saturday:'sabado' };
-    ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].forEach(day => {
+    const map = { Monday: 'segunda', Tuesday: 'terca', Wednesday: 'quarta', Thursday: 'quinta', Friday: 'sexta', Saturday: 'sabado' };
+    ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].forEach(day => {
         if (document.getElementById(`day${day}`).checked) days.push(map[day]);
     });
     if (!name || !days.length || !time) { showNotification('Preencha todos os campos', 'warning'); return; }
-    if (id) { updateClass(parseInt(id), {name,days,time,color}); showNotification('Turma atualizada'); }
-    else { addClass({name,days,time,color}); showNotification('Turma criada'); }
+    if (id) { updateClass(parseInt(id), { name, days, time, color }); showNotification('Turma atualizada'); }
+    else { addClass({ name, days, time, color }); showNotification('Turma criada'); }
     bootstrap.Modal.getInstance(document.getElementById('classModal')).hide();
     updateUI();
 }
@@ -699,11 +741,11 @@ function showClassDetails(id) {
     const modal = new bootstrap.Modal(document.getElementById('classDetailModal'));
     document.getElementById('classDetailContent').innerHTML = `
         <div class="d-flex align-items-center mb-3"><span class="class-color-badge me-2" style="background:${cls.color}"></span><h4>${cls.name}</h4></div>
-        <p><strong>Horário:</strong> ${cls.days.map(d=>WEEK_DAYS[d]).join(', ')} às ${cls.time}</p>
+        <p><strong>Horário:</strong> ${cls.days.map(d => WEEK_DAYS[d]).join(', ')} às ${cls.time}</p>
         <p><strong>Total de Alunos:</strong> ${students.length}</p>
         <div class="row mb-3"><div class="col-md-6"><div class="card text-center p-2"><h3>${stats.averageFale.toFixed(1)}</h3><small>Média F.A.L.E</small></div></div>
         <div class="col-md-6"><div class="card text-center p-2"><h3>${Math.round(stats.attendanceRate)}%</h3><small>Frequência</small></div></div></div>
-        <h5>Alunos</h5>${students.length ? `<div class="table-responsive"><table class="table table-sm"><thead><tr><th>Nome</th><th>Próx. Lição</th><th>F.A.L.E</th></tr></thead><tbody>${students.map(s=>`<tr><td>${s.name}</td><td><span class="lesson-badge ${getLessonType(s.nextLessonValue)}">${s.nextLesson}</span></td><td>${['F','A','L','E'].map(l=>s.fala?.[l]?`<span class="fala-badge ${FALA_CLASSES[s.fala[l]]} me-1">${l}</span>`:'').join('')}</td></tr>`).join('')}</tbody></table></div>` : '<p class="text-muted">Nenhum aluno</p>'}
+        <h5>Alunos</h5>${students.length ? `<div class="table-responsive"><table class="table table-sm"><thead><tr><th>Nome</th><th>Próx. Lição</th><th>F.A.L.E</th></tr></thead><tbody>${students.map(s => `<tr><td>${s.name}</td><td><span class="lesson-badge ${getLessonType(s.nextLessonValue)}">${s.nextLesson}</span></td><td>${['F', 'A', 'L', 'E'].map(l => s.fala?.[l] ? `<span class="fala-badge ${FALA_CLASSES[s.fala[l]]} me-1">${l}</span>` : '').join('')}</td></tr>`).join('')}</tbody></table></div>` : '<p class="text-muted">Nenhum aluno</p>'}
     `;
     modal.show();
 }
@@ -720,30 +762,28 @@ function deleteClassWithConfirm(id) {
 function updateStudentsSection() {
     renderStudentsTable();
     const filter = document.getElementById('student-class-filter');
-    if (filter) {
-        filter.innerHTML = '<option value="">Todas as turmas</option>';
-        getClasses().forEach(c => filter.innerHTML += `<option value="${c.id}">${c.name}</option>`);
-    }
+    filter.innerHTML = '<option value="">Todas as turmas</option>';
+    getClasses().forEach(c => filter.innerHTML += `<option value="${c.id}">${c.name}</option>`);
 }
 function renderStudentsTable() {
     const tbody = document.getElementById('students-table-body');
     const students = getStudents();
     if (!students.length) {
         tbody.innerHTML = `<tr><td colspan="7" class="text-center"><div class="empty-state"><i class="bi bi-person-vcard"></i><h5>Nenhum aluno</h5><button class="btn btn-primary" id="add-first-student-btn">Adicionar Aluno</button></div></td></tr>`;
-        document.getElementById('add-first-student-btn')?.addEventListener('click', ()=>showStudentModal());
+        document.getElementById('add-first-student-btn')?.addEventListener('click', () => showStudentModal());
         return;
     }
     tbody.innerHTML = students.map(s => {
         const cls = getClassById(s.classId);
         const fala = s.fala || {};
-        const badges = ['F','A','L','E'].map(l => fala[l] ? `<span class="fala-badge ${FALA_CLASSES[fala[l]]}" title="${l}">${l}</span>` : '').join(' ');
+        const badges = ['F', 'A', 'L', 'E'].map(l => fala[l] ? `<span class="fala-badge ${FALA_CLASSES[fala[l]]}" title="${l}">${l}</span>` : '').join(' ');
         return `<tr>
-            <td><strong>${s.name}</strong> ${s.homework==='sim'?'<span class="badge bg-success">✓</span>':''} ${s.preparation==='sim'?'<span class="badge bg-info">📚</span>':''}</td>
-            <td>${cls?.name||'Sem turma'}</td>
+            <td><strong>${s.name}</strong> ${s.homework === 'sim' ? '<span class="badge bg-success">✓</span>' : ''} ${s.preparation === 'sim' ? '<span class="badge bg-info">📚</span>' : ''}</td>
+            <td>${cls?.name || 'Sem turma'}</td>
             <td><span class="lesson-badge ${getLessonType(s.lastLessonValue)}">${s.lastLesson}</span></td>
             <td><span class="lesson-badge ${getLessonType(s.nextLessonValue)}">${s.nextLesson}</span></td>
             <td>${badges}</td>
-            <td><span class="badge ${s.average>=3.5?'bg-success':s.average>=2.5?'bg-warning':'bg-secondary'}">${s.average.toFixed(1)}</span></td>
+            <td><span class="badge ${s.average >= 3.5 ? 'bg-success' : s.average >= 2.5 ? 'bg-warning' : 'bg-secondary'}">${s.average.toFixed(1)}</span></td>
             <td><div class="student-actions">
                 <button class="btn btn-sm btn-outline-primary edit-student-btn" data-id="${s.id}"><i class="bi bi-pencil"></i></button>
                 <button class="btn btn-sm btn-outline-danger delete-student-btn" data-id="${s.id}"><i class="bi bi-trash"></i></button>
@@ -833,7 +873,7 @@ function updatePlanningSection() {
     const historySelect = document.getElementById('history-class-select');
     historySelect.innerHTML = '<option value="">Todas as turmas</option>';
     getClasses().forEach(c => historySelect.innerHTML += `<option value="${c.id}">${c.name}</option>`);
-    document.getElementById('history-month').value = new Date().toISOString().slice(0,7);
+    document.getElementById('history-month').value = new Date().toISOString().slice(0, 7);
     renderLessonHistory();
 }
 function loadLessonData(classId, date) {
@@ -857,9 +897,9 @@ function renderAttendanceOrder(order) {
 function renderPeerSuggestions(pairs) {
     const cont = document.getElementById('peer-suggestions');
     if (!pairs.length) { cont.innerHTML = '<p class="text-muted">Não há sugestões</p>'; return; }
-    cont.innerHTML = pairs.map((p,i) => `
+    cont.innerHTML = pairs.map((p, i) => `
         <div class="pair-suggestion mb-2 p-2 border rounded">
-            <div class="d-flex justify-content-between"><span class="badge bg-success">Par ${i+1}</span><small>Diferença: ${p.difference}</small></div>
+            <div class="d-flex justify-content-between"><span class="badge bg-success">Par ${i + 1}</span><small>Diferença: ${p.difference}</small></div>
             <div class="row mt-2">
                 <div class="col-5"><strong>${p.student1.name}</strong><br><span class="lesson-badge ${getLessonType(p.student1.nextLessonValue)}">${p.student1.nextLesson}</span></div>
                 <div class="col-2 text-center"><i class="bi bi-arrow-left-right"></i></div>
@@ -870,25 +910,64 @@ function renderPeerSuggestions(pairs) {
     `).join('');
     cont.querySelectorAll('.confirm-pair-btn').forEach(b => b.addEventListener('click', e => {
         const pair = JSON.parse(e.target.closest('button').dataset.pair);
-        addConfirmedPair(pair);
+        addConfirmedPair(pair, e.target.closest('button'));
     }));
 }
-function addConfirmedPair(pair) {
-    const cont = document.getElementById('peer-suggestions');
-    // Adiciona um badge de confirmado
-    const btn = event.target.closest('button');
+function addConfirmedPair(pair, btn) {
     if (btn) {
         btn.disabled = true;
         btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Confirmado';
         btn.classList.remove('btn-outline-success');
         btn.classList.add('btn-success');
     }
-    // Armazena em um array global? Vamos guardar na própria div como data.
-    // Para salvar depois, coletaremos todos os pares com botão confirmado.
+    // Armazenar em algum lugar? O salvamento da aula pegará todos os botões confirmados.
+}
+function showManualPeerModal() {
+    const classId = parseInt(document.getElementById('lesson-class-select').value);
+    if (!classId) { showNotification('Selecione uma turma primeiro', 'warning'); return; }
+    const students = getStudentsByClass(classId);
+    if (students.length < 2) { showNotification('Precisa de pelo menos 2 alunos', 'warning'); return; }
+    const select1 = document.getElementById('manualPeerStudent1');
+    const select2 = document.getElementById('manualPeerStudent2');
+    select1.innerHTML = '<option value="">Selecione</option>';
+    select2.innerHTML = '<option value="">Selecione</option>';
+    students.forEach(s => {
+        select1.innerHTML += `<option value="${s.id}">${s.name} (${s.nextLesson})</option>`;
+        select2.innerHTML += `<option value="${s.id}">${s.name} (${s.nextLesson})</option>`;
+    });
+    new bootstrap.Modal(document.getElementById('manualPeerModal')).show();
 }
 function addManualPeer() {
-    // Simplificado: apenas abre prompt para IDs (em produção faria um modal)
-    alert('Função para adicionar par manualmente (pode ser implementada com modal)');
+    const classId = parseInt(document.getElementById('lesson-class-select').value);
+    const id1 = parseInt(document.getElementById('manualPeerStudent1').value);
+    const id2 = parseInt(document.getElementById('manualPeerStudent2').value);
+    if (!id1 || !id2 || id1 === id2) {
+        showNotification('Selecione dois alunos diferentes', 'warning');
+        return;
+    }
+    const s1 = getStudentById(id1);
+    const s2 = getStudentById(id2);
+    const pair = {
+        student1: s1,
+        student2: s2,
+        difference: Math.abs(s1.nextLessonValue - s2.nextLessonValue)
+    };
+    // Adiciona à lista de sugestões como um par manual (já confirmado)
+    const cont = document.getElementById('peer-suggestions');
+    const pairDiv = document.createElement('div');
+    pairDiv.className = 'pair-suggestion mb-2 p-2 border rounded';
+    pairDiv.innerHTML = `
+        <div class="d-flex justify-content-between"><span class="badge bg-success">Par Manual</span><small>Diferença: ${pair.difference}</small></div>
+        <div class="row mt-2">
+            <div class="col-5"><strong>${s1.name}</strong><br><span class="lesson-badge ${getLessonType(s1.nextLessonValue)}">${s1.nextLesson}</span></div>
+            <div class="col-2 text-center"><i class="bi bi-arrow-left-right"></i></div>
+            <div class="col-5"><strong>${s2.name}</strong><br><span class="lesson-badge ${getLessonType(s2.nextLessonValue)}">${s2.nextLesson}</span></div>
+        </div>
+        <div class="mt-2"><button class="btn btn-sm btn-success confirm-pair-btn" disabled><i class="bi bi-check-circle-fill"></i> Confirmado</button></div>
+    `;
+    cont.appendChild(pairDiv);
+    bootstrap.Modal.getInstance(document.getElementById('manualPeerModal')).hide();
+    showNotification('Par adicionado manualmente', 'success');
 }
 function renderStudentEvaluations(classId, date, savedEvals = []) {
     const cont = document.getElementById('student-evaluations-container');
@@ -910,24 +989,24 @@ function renderStudentEvaluations(classId, date, savedEvals = []) {
             <td><select class="form-select form-select-sm eval-fala" data-student="${s.id}" data-cat="A">${optionsFALA(fala.A)}</select></td>
             <td><select class="form-select form-select-sm eval-fala" data-student="${s.id}" data-cat="L">${optionsFALA(fala.L)}</select></td>
             <td><select class="form-select form-select-sm eval-fala" data-student="${s.id}" data-cat="E">${optionsFALA(fala.E)}</select></td>
-            <td><select class="form-select form-select-sm eval-homework" data-student="${s.id}">${optionsHW(ev.homework||'nao')}</select></td>
-            <td><select class="form-select form-select-sm eval-preparation" data-student="${s.id}">${optionsPrep(ev.preparation||'nao')}</select></td>
-            <td><input type="text" class="form-control form-control-sm eval-comment" data-student="${s.id}" value="${ev.comment||''}"></td>
+            <td><select class="form-select form-select-sm eval-homework" data-student="${s.id}">${optionsHW(ev.homework || 'nao')}</select></td>
+            <td><select class="form-select form-select-sm eval-preparation" data-student="${s.id}">${optionsPrep(ev.preparation || 'nao')}</select></td>
+            <td><input type="text" class="form-control form-control-sm eval-comment" data-student="${s.id}" value="${ev.comment || ''}"></td>
         </tr>`;
     });
     html += '</tbody></table></div>';
     cont.innerHTML = html;
 }
 function optionsFALA(selected = '') {
-    const opts = ['','O','MB','B','R'];
-    return opts.map(v => `<option value="${v}" ${v===selected?'selected':''}>${v||'-'}</option>`).join('');
+    const opts = ['', 'O', 'MB', 'B', 'R'];
+    return opts.map(v => `<option value="${v}" ${v === selected ? 'selected' : ''}>${v || '-'}</option>`).join('');
 }
 function optionsHW(sel) {
-    const opts = { 'sim':'Feito', 'nao':'Não', 'parcial':'Parcial' };
-    return Object.entries(opts).map(([v,l]) => `<option value="${v}" ${v===sel?'selected':''}>${l}</option>`).join('');
+    const opts = { 'sim': 'Feito', 'nao': 'Não', 'parcial': 'Parcial' };
+    return Object.entries(opts).map(([v, l]) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${l}</option>`).join('');
 }
 function optionsPrep(sel) {
-    return `<option value="sim" ${sel==='sim'?'selected':''}>Sim</option><option value="nao" ${sel==='nao'?'selected':''}>Não</option>`;
+    return `<option value="sim" ${sel === 'sim' ? 'selected' : ''}>Sim</option><option value="nao" ${sel === 'nao' ? 'selected' : ''}>Não</option>`;
 }
 function collectStudentEvaluations() {
     const evals = [];
@@ -976,7 +1055,7 @@ function saveCurrentLesson() {
     const peerPairs = [];
     document.querySelectorAll('#peer-suggestions .pair-suggestion').forEach((item, idx) => {
         const badge = item.querySelector('.badge.bg-success');
-        const isConfirmed = badge && badge.textContent.includes('Confirmado');
+        const isConfirmed = badge && (badge.textContent.includes('Confirmado') || badge.textContent.includes('Manual'));
         if (isConfirmed) {
             const names = item.querySelectorAll('strong');
             const lessons = item.querySelectorAll('.lesson-badge');
@@ -1003,10 +1082,6 @@ function saveCurrentLesson() {
         if (evalItem.fala) {
             const student = getStudentById(evalItem.studentId);
             if (student) {
-                // Atualizar a avaliação F.A.L.E do aluno (média geral)
-                const oldFala = student.fala || {};
-                // Aqui podemos optar por atualizar a média cumulativa ou apenas a mais recente
-                // Vamos atualizar para a mais recente (simples)
                 student.fala = evalItem.fala;
                 student.average = calculateFalaAverage(evalItem.fala);
             }
@@ -1044,7 +1119,6 @@ function loadExistingLesson() {
     // Marcar pares que estavam confirmados
     if (lesson.peerPairs && lesson.peerPairs.length) {
         lesson.peerPairs.forEach(pair => {
-            // Procurar o card do par e marcar como confirmado
             const cards = document.querySelectorAll('#peer-suggestions .pair-suggestion');
             cards.forEach(card => {
                 const names = card.querySelectorAll('strong');
@@ -1117,17 +1191,13 @@ function renderLessonHistory() {
         `;
     });
     container.innerHTML = html;
-    // Event listeners
     container.querySelectorAll('.edit-history-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const classId = parseInt(btn.dataset.class);
             const date = btn.dataset.date;
-            // Mudar para aba Nova Aula
             document.getElementById('new-lesson-tab').click();
-            // Selecionar turma e data
             document.getElementById('lesson-class-select').value = classId;
             document.getElementById('lesson-date').value = date;
-            // Carregar dados
             loadExistingLesson();
         });
     });
@@ -1151,9 +1221,7 @@ function updateAttendanceSection() {
     getClasses().forEach(c => select.innerHTML += `<option value="${c.id}">${c.name}</option>`);
     const date = document.getElementById('attendance-date');
     if (!date.value) date.value = new Date().toISOString().split('T')[0];
-    // Estatísticas de frequência por turma
     updateAttendanceStats();
-    // Histórico de frequência (últimas 5)
     updateAttendanceHistory();
 }
 function loadAttendanceTable() {
@@ -1175,25 +1243,25 @@ function renderAttendanceTable(attendance) {
             <td>${a.studentName}</td>
             <td>
                 <select class="form-select form-select-sm attendance-status" data-student="${a.studentId}">
-                    <option value="present" ${a.status==='present'?'selected':''}>Presente</option>
-                    <option value="absent" ${a.status==='absent'?'selected':''}>Ausente</option>
-                    <option value="justified" ${a.status==='justified'?'selected':''}>Justificado</option>
+                    <option value="present" ${a.status === 'present' ? 'selected' : ''}>Presente</option>
+                    <option value="absent" ${a.status === 'absent' ? 'selected' : ''}>Ausente</option>
+                    <option value="justified" ${a.status === 'justified' ? 'selected' : ''}>Justificado</option>
                 </select>
             </td>
             <td>
                 <select class="form-select form-select-sm attendance-homework" data-student="${a.studentId}">
-                    <option value="sim" ${a.homework==='sim'?'selected':''}>Feito</option>
-                    <option value="nao" ${a.homework==='nao'?'selected':''}>Não</option>
-                    <option value="parcial" ${a.homework==='parcial'?'selected':''}>Parcial</option>
+                    <option value="sim" ${a.homework === 'sim' ? 'selected' : ''}>Feito</option>
+                    <option value="nao" ${a.homework === 'nao' ? 'selected' : ''}>Não</option>
+                    <option value="parcial" ${a.homework === 'parcial' ? 'selected' : ''}>Parcial</option>
                 </select>
             </td>
             <td>
                 <select class="form-select form-select-sm attendance-preparation" data-student="${a.studentId}">
-                    <option value="sim" ${a.preparation==='sim'?'selected':''}>Sim</option>
-                    <option value="nao" ${a.preparation==='nao'?'selected':''}>Não</option>
+                    <option value="sim" ${a.preparation === 'sim' ? 'selected' : ''}>Sim</option>
+                    <option value="nao" ${a.preparation === 'nao' ? 'selected' : ''}>Não</option>
                 </select>
             </td>
-            <td><input type="text" class="form-control form-control-sm attendance-observation" data-student="${a.studentId}" value="${a.observation||''}"></td>
+            <td><input type="text" class="form-control form-control-sm attendance-observation" data-student="${a.studentId}" value="${a.observation || ''}"></td>
         </tr>`;
     });
     html += `</tbody></table></div><button class="btn btn-primary mt-2" id="save-attendance-btn"><i class="bi bi-save"></i> Salvar Frequência</button>`;
@@ -1242,8 +1310,8 @@ function updateAttendanceHistory() {
             });
         }
     });
-    history.sort((a,b) => b.date.localeCompare(a.date));
-    history = history.slice(0, 10); // últimos 10
+    history.sort((a, b) => b.date.localeCompare(a.date));
+    history = history.slice(0, 10);
     if (!history.length) { container.innerHTML = '<p class="text-muted">Nenhum registro</p>'; return; }
     let html = '<ul class="list-unstyled">';
     history.forEach(h => {
@@ -1253,7 +1321,6 @@ function updateAttendanceHistory() {
     html += '</ul>';
     container.innerHTML = html;
 }
-// compatibilidade com modal antigo
 function showLegacyAttendanceModal() {
     alert('Use a seção de Frequência acima para registrar presenças.');
 }
@@ -1264,7 +1331,7 @@ function updateReportsSection() {
     select.innerHTML = '<option value="">Todas as turmas</option>';
     getClasses().forEach(c => select.innerHTML += `<option value="${c.id}">${c.name}</option>`);
     const month = document.getElementById('report-month');
-    if (!month.value) month.value = new Date().toISOString().slice(0,7);
+    if (!month.value) month.value = new Date().toISOString().slice(0, 7);
     loadReports();
 }
 function loadReports() {
@@ -1281,16 +1348,16 @@ function updateProgressReport(classId) {
     cont.innerHTML = `<p><strong>Média F.A.L.E:</strong> ${rep.averageFale.toFixed(1)}</p>
         <p><strong>Frequência média:</strong> ${rep.attendanceRate.toFixed(0)}%</p>
         <p><strong>Total de alunos:</strong> ${rep.totalStudents}</p>
-        ${rep.classes.map(c => `<div class="mb-2"><div class="d-flex justify-content-between"><span>${c.className}</span><span>${c.averageFale.toFixed(1)}</span></div><div class="progress"><div class="progress-bar" style="width:${c.averageFale*25}%"></div></div></div>`).join('')}`;
+        ${rep.classes.map(c => `<div class="mb-2"><div class="d-flex justify-content-between"><span>${c.className}</span><span>${c.averageFale.toFixed(1)}</span></div><div class="progress"><div class="progress-bar" style="width:${c.averageFale * 25}%"></div></div></div>`).join('')}`;
 }
 function updateFalaDistribution(classId) {
     const rep = generateFalaReport(classId);
     const cont = document.getElementById('fale-distribution');
     cont.innerHTML = `<div class="row text-center">
-        <div class="col-3"><span class="badge bg-O fs-6 p-2">Ótimo</span><h5>${rep.distribution.O||0}</h5></div>
-        <div class="col-3"><span class="badge bg-MB fs-6 p-2">M.Bom</span><h5>${rep.distribution.MB||0}</h5></div>
-        <div class="col-3"><span class="badge bg-B fs-6 p-2">Bom</span><h5>${rep.distribution.B||0}</h5></div>
-        <div class="col-3"><span class="badge bg-R fs-6 p-2">Regular</span><h5>${rep.distribution.R||0}</h5></div>
+        <div class="col-3"><span class="badge bg-O fs-6 p-2">Ótimo</span><h5>${rep.distribution.O || 0}</h5></div>
+        <div class="col-3"><span class="badge bg-MB fs-6 p-2">M.Bom</span><h5>${rep.distribution.MB || 0}</h5></div>
+        <div class="col-3"><span class="badge bg-B fs-6 p-2">Bom</span><h5>${rep.distribution.B || 0}</h5></div>
+        <div class="col-3"><span class="badge bg-R fs-6 p-2">Regular</span><h5>${rep.distribution.R || 0}</h5></div>
     </div><hr><p><strong>Médias:</strong> F:${rep.averages.F.toFixed(1)} A:${rep.averages.A.toFixed(1)} L:${rep.averages.L.toFixed(1)} E:${rep.averages.E.toFixed(1)}</p>`;
 }
 function updateDetailedReport(classId, type) {
@@ -1304,17 +1371,17 @@ function updateDetailedReport(classId, type) {
         const rep = generateAttendanceReport(classId);
         cont.innerHTML = `<p><strong>Frequência geral:</strong> ${rep.overallAttendance.toFixed(1)}%</p>
             <table class="table table-sm"><thead><tr><th>Aluno</th><th>Turma</th><th>Presente</th><th>Ausente</th><th>Just.</th><th>Taxa</th></tr></thead><tbody>
-            ${rep.students.map(s => `<tr><td>${s.studentName}</td><td>${s.className}</td><td>${s.present}</td><td>${s.absent}</td><td>${s.justified}</td><td>${s.attendanceRate.toFixed(0)}%</td></tr>`).slice(0,20).join('')}
+            ${rep.students.map(s => `<tr><td>${s.studentName}</td><td>${s.className}</td><td>${s.present}</td><td>${s.absent}</td><td>${s.justified}</td><td>${s.attendanceRate.toFixed(0)}%</td></tr>`).slice(0, 20).join('')}
         </tbody></table>`;
     } else if (type === 'fale') {
         const rep = generateFalaReport(classId);
         cont.innerHTML = `<table class="table table-sm"><thead><tr><th>Aluno</th><th>Turma</th><th>F</th><th>A</th><th>L</th><th>E</th><th>Média</th></tr></thead><tbody>
             ${rep.students.map(s => `<tr><td>${s.studentName}</td><td>${s.className}</td>
-                <td><span class="fala-badge ${FALA_CLASSES[s.fala?.F]||''}">${s.fala?.F||'-'}</span></td>
-                <td><span class="fala-badge ${FALA_CLASSES[s.fala?.A]||''}">${s.fala?.A||'-'}</span></td>
-                <td><span class="fala-badge ${FALA_CLASSES[s.fala?.L]||''}">${s.fala?.L||'-'}</span></td>
-                <td><span class="fala-badge ${FALA_CLASSES[s.fala?.E]||''}">${s.fala?.E||'-'}</span></td>
-                <td>${s.average.toFixed(1)}</td></tr>`).slice(0,20).join('')}
+                <td><span class="fala-badge ${FALA_CLASSES[s.fala?.F] || ''}">${s.fala?.F || '-'}</span></td>
+                <td><span class="fala-badge ${FALA_CLASSES[s.fala?.A] || ''}">${s.fala?.A || '-'}</span></td>
+                <td><span class="fala-badge ${FALA_CLASSES[s.fala?.L] || ''}">${s.fala?.L || '-'}</span></td>
+                <td><span class="fala-badge ${FALA_CLASSES[s.fala?.E] || ''}">${s.fala?.E || '-'}</span></td>
+                <td>${s.average.toFixed(1)}</td></tr>`).slice(0, 20).join('')}
         </tbody></table>`;
     }
 }
@@ -1359,7 +1426,7 @@ function exportLessonPDF() {
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
         <style>body{padding:20px;}</style>
         </head><body>
-        <h2>${cls?.name} - ${new Date(date+'T12:00:00').toLocaleDateString('pt-BR')}</h2>
+        <h2>${cls?.name} - ${new Date(date + 'T12:00:00').toLocaleDateString('pt-BR')}</h2>
         <h4>Ordem de Atendimento</h4>${orderHTML}
         <h4 class="mt-4">Peer Work</h4>${pairsHTML}
         <h4 class="mt-4">Observações</h4><p>${notes || 'Nenhuma'}</p>
@@ -1429,12 +1496,12 @@ async function exportToGitHub() {
         try {
             const resp = await fetch(url, { headers });
             if (resp.ok) sha = (await resp.json()).sha;
-        } catch(e) {}
+        } catch (e) { }
         const body = { message: `Backup ${new Date().toLocaleString()}`, content: encoded, ...(sha && { sha }) };
         const put = await fetch(url, { method: 'PUT', headers, body: JSON.stringify(body) });
         if (put.ok) { showNotification('Salvo no GitHub!', 'success'); return true; }
         else throw new Error((await put.json()).message);
-    } catch(e) {
+    } catch (e) {
         showNotification('Erro GitHub: ' + e.message, 'error');
         return false;
     }
@@ -1454,12 +1521,18 @@ async function importFromGitHub() {
         const decoded = decodeURIComponent(escape(atob(file.content)));
         const data = JSON.parse(decoded);
         AppState.data = data.appData;
+        // Recalcular valores derivados
+        AppState.data.students.forEach(s => {
+            s.nextLessonValue = calculateLessonValue(s.nextLesson);
+            s.lastLessonValue = calculateLessonValue(s.lastLesson);
+            s.average = calculateFalaAverage(s.fala);
+        });
         AppState.settings = data.settings;
         saveData(); saveSettings();
         showNotification('Importado do GitHub!', 'success');
         updateUI();
         return true;
-    } catch(e) {
+    } catch (e) {
         showNotification('Erro ao importar: ' + e.message, 'error');
         return false;
     }
@@ -1487,11 +1560,17 @@ function handleFileImport(e) {
             if (!confirm('Substituir todos os dados atuais?')) return;
             if (!data.appData) throw new Error('Arquivo inválido');
             AppState.data = data.appData;
+            // Recalcular valores derivados
+            AppState.data.students.forEach(s => {
+                s.nextLessonValue = calculateLessonValue(s.nextLesson);
+                s.lastLessonValue = calculateLessonValue(s.lastLesson);
+                s.average = calculateFalaAverage(s.fala);
+            });
             AppState.settings = data.settings || DEFAULT_DATA.settings;
             saveData(); saveSettings();
             showNotification('Importado com sucesso!', 'success');
             updateUI();
-        } catch(err) {
+        } catch (err) {
             showNotification('Erro no arquivo', 'error');
         }
     };
@@ -1500,7 +1579,18 @@ function handleFileImport(e) {
 }
 
 // Inicialização
-document.addEventListener('DOMContentLoaded', initApp);
+document.addEventListener('DOMContentLoaded', () => {
+    loadData();
+    loadSettings();
+    loadGitHubConfig();
+    setupEventListeners();
+    setupNavigation();
+    updateUI();
+    initTheme();
+    updateLastSave();
+});
+
+// Expor funções globais para debug, se necessário
 window.AppState = AppState;
 window.getClasses = getClasses;
 window.getStudents = getStudents;
